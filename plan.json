@@ -1,0 +1,44 @@
+[
+  {
+    "order": 1,
+    "task": "Locate existing CLI/extension command scaffolding and add the quartermaster entry points.",
+    "notes": "Added quartermaster entrypoint helpers, a local extension entry, and a CLI runner plus node:test coverage for parsing and wiring.",
+    "done": true
+  },
+  {
+    "order": 2,
+    "task": "Implement config loading/saving for .pi/quartermaster.json with repo path prompts.",
+    "notes": "Added config helpers to read/write .pi/quartermaster.json, enforce defaults, prompt for repo path when UI is available, and error in non-interactive mode; covered with new node:test cases for reading, writing, overrides, and prompting.",
+    "done": true
+  },
+  {
+    "order": 3,
+    "task": "Add shared repo discovery for items and sets parsing from quartermaster_sets.json.",
+    "notes": "",
+    "done": false
+  },
+  {
+    "order": 4,
+    "task": "Implement core commands: list, installed, sets with grouped output.",
+    "notes": "",
+    "done": false
+  },
+  {
+    "order": 5,
+    "task": "Implement install/remove flows for single items and sets with symlink handling.",
+    "notes": "",
+    "done": false
+  },
+  {
+    "order": 6,
+    "task": "Implement add-to-set and remove-from-set editing the shared sets file.",
+    "notes": "",
+    "done": false
+  },
+  {
+    "order": 7,
+    "task": "Add minimal validation/errors and update docs/examples if required.",
+    "notes": "",
+    "done": false
+  }
+]

@@ -1,0 +1,12 @@
+{
+  "name": "maxwell",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "test": "node --test --import tsx"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.0",
+    "typescript": "^5.8.2"
+  }
+}
