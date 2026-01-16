@@ -1,0 +1,6 @@
+spec.md
+plan.json
+plan.md
+prompt.md
+node_modules/*
+run_pi_10.sh
