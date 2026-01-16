@@ -14,8 +14,8 @@
   {
     "order": 3,
     "task": "Add shared repo discovery for items and sets parsing from quartermaster_sets.json.",
-    "notes": "",
-    "done": false
+    "notes": "Added shared repo discovery helpers for skills/extensions/tools/prompts plus sets file parsing with normalization and missing-file handling; covered with tests for discovery and set parsing.",
+    "done": true
   },
   {
     "order": 4,
