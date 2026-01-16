@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { resolveQuartermasterConfig } from "./config";
 import { discoverQuartermasterItems, readQuartermasterSets } from "./discovery";
@@ -8,7 +9,12 @@ import type {
 	QuartermasterExecuteResult,
 	QuartermasterParsedArgs,
 } from "./entrypoints";
-import type { QuartermasterDiscoveredItems, QuartermasterItemType, QuartermasterSets } from "./discovery";
+import type {
+	QuartermasterDiscoveredItems,
+	QuartermasterItemType,
+	QuartermasterSetDefinition,
+	QuartermasterSets,
+} from "./discovery";
 
 const ITEM_TYPES: QuartermasterItemType[] = ["skills", "extensions", "tools", "prompts"];
 
@@ -17,6 +23,18 @@ type QuartermasterGroupedItems = Record<QuartermasterItemType, string[]>;
 type QuartermasterCommandOutcome = {
 	ok: boolean;
 	message: string;
+};
+
+type QuartermasterItemResult = {
+	status: string;
+	item: string;
+	detail?: string;
+};
+
+type QuartermasterResolvedInstall = {
+	sourcePath: string;
+	targetPath: string;
+	displayPath: string;
 };
 
 async function pathExists(targetPath: string): Promise<boolean> {
@@ -33,6 +51,36 @@ function normalizeRelativePath(basePath: string, targetPath: string): string {
 	return relative.split(path.sep).join("/");
 }
 
+function normalizeInputPath(input: string): string {
+	return input.replace(/\\/gu, "/").replace(/^\.\//u, "").trim();
+}
+
+function stripTypePrefix(type: QuartermasterItemType, input: string): string {
+	const prefix = `${type}/`;
+	if (input.startsWith(prefix)) {
+		return input.slice(prefix.length);
+	}
+	return input;
+}
+
+function expandHomePath(input: string): string {
+	if (!input.startsWith("~")) {
+		return input;
+	}
+
+	if (input === "~") {
+		return os.homedir();
+	}
+
+	const remainder = input.slice(1);
+	const trimmed = remainder.startsWith(path.sep) ? remainder.slice(1) : remainder;
+	return path.join(os.homedir(), trimmed);
+}
+
+function isExternalPath(input: string): boolean {
+	return input.startsWith("~") || path.isAbsolute(input);
+}
+
 function emptyGroupedItems(): QuartermasterGroupedItems {
 	return ITEM_TYPES.reduce((acc, type) => {
 		acc[type] = [];
@@ -45,6 +93,141 @@ function groupDiscoveredItems(items: QuartermasterDiscoveredItems): Quartermaste
 		acc[type] = items[type].map((item) => item.path);
 		return acc;
 	}, {} as QuartermasterGroupedItems);
+}
+
+function resolveInstallPaths(
+	type: QuartermasterItemType,
+	itemPath: string,
+	repoPath: string,
+	cwd: string
+): QuartermasterResolvedInstall {
+	const trimmed = itemPath.trim();
+	if (!trimmed) {
+		throw new Error("Missing item path.");
+	}
+
+	const expanded = expandHomePath(trimmed);
+	const baseRoot = path.join(cwd, ".pi");
+
+	if (isExternalPath(trimmed)) {
+		const sourcePath = path.resolve(expanded);
+		const targetPath = path.join(baseRoot, type, path.basename(sourcePath));
+		const displayPath = normalizeRelativePath(baseRoot, targetPath);
+		return { sourcePath, targetPath, displayPath };
+	}
+
+	const normalized = normalizeInputPath(trimmed);
+	const withoutPrefix = stripTypePrefix(type, normalized);
+	if (!withoutPrefix) {
+		throw new Error("Missing item path.");
+	}
+
+	const sourceRelative = normalized.startsWith(`${type}/`)
+		? normalized
+		: `${type}/${withoutPrefix}`;
+	const sourcePath = path.join(repoPath, ...sourceRelative.split("/"));
+	const targetPath = path.join(baseRoot, type, ...withoutPrefix.split("/"));
+	const displayPath = normalizeRelativePath(baseRoot, targetPath);
+	return { sourcePath, targetPath, displayPath };
+}
+
+function resolveRemoveTarget(
+	type: QuartermasterItemType,
+	itemPath: string,
+	cwd: string
+): { targetPath: string; displayPath: string } {
+	const trimmed = itemPath.trim();
+	if (!trimmed) {
+		throw new Error("Missing item path.");
+	}
+
+	const baseRoot = path.join(cwd, ".pi");
+	if (isExternalPath(trimmed)) {
+		const expanded = expandHomePath(trimmed);
+		const targetPath = path.join(baseRoot, type, path.basename(expanded));
+		const displayPath = normalizeRelativePath(baseRoot, targetPath);
+		return { targetPath, displayPath };
+	}
+
+	const normalized = normalizeInputPath(trimmed);
+	const withoutPrefix = stripTypePrefix(type, normalized);
+	if (!withoutPrefix) {
+		throw new Error("Missing item path.");
+	}
+	const targetPath = path.join(baseRoot, type, ...withoutPrefix.split("/"));
+	const displayPath = normalizeRelativePath(baseRoot, targetPath);
+	return { targetPath, displayPath };
+}
+
+function flattenSetItems(set: QuartermasterSetDefinition): Array<{ type: QuartermasterItemType; path: string }> {
+	const results: Array<{ type: QuartermasterItemType; path: string }> = [];
+	for (const type of ITEM_TYPES) {
+		for (const entry of set.items[type]) {
+			results.push({ type, path: entry });
+		}
+	}
+	return results;
+}
+
+async function linkItem(sourcePath: string, targetPath: string): Promise<{ status: string; detail?: string }> {
+	try {
+		await fs.stat(sourcePath);
+	} catch (error) {
+		const err = error as NodeJS.ErrnoException;
+		if (err.code === "ENOENT") {
+			return { status: "failed", detail: "source not found" };
+		}
+		throw error;
+	}
+
+	try {
+		const stats = await fs.lstat(targetPath);
+		if (!stats.isSymbolicLink()) {
+			return { status: "failed", detail: "target exists and is not a symlink" };
+		}
+		const existing = await fs.readlink(targetPath);
+		const resolvedExisting = path.resolve(path.dirname(targetPath), existing);
+		const resolvedSource = path.resolve(sourcePath);
+		if (resolvedExisting === resolvedSource) {
+			return { status: "already linked" };
+		}
+		return { status: "failed", detail: "target already links elsewhere" };
+	} catch (error) {
+		const err = error as NodeJS.ErrnoException;
+		if (err.code !== "ENOENT") {
+			throw error;
+		}
+	}
+
+	await fs.mkdir(path.dirname(targetPath), { recursive: true });
+	await fs.symlink(sourcePath, targetPath);
+	return { status: "linked" };
+}
+
+async function removeItem(targetPath: string): Promise<{ status: string; detail?: string }> {
+	try {
+		const stats = await fs.lstat(targetPath);
+		if (!stats.isSymbolicLink()) {
+			return { status: "failed", detail: "target exists and is not a symlink" };
+		}
+		await fs.unlink(targetPath);
+		return { status: "removed" };
+	} catch (error) {
+		const err = error as NodeJS.ErrnoException;
+		if (err.code === "ENOENT") {
+			return { status: "missing" };
+		}
+		throw error;
+	}
+}
+
+function formatItemResults(header: string, results: QuartermasterItemResult[]): string {
+	const lines = [header];
+	for (const result of results) {
+		const detail = result.detail ? `: ${result.detail}` : "";
+		lines.push(`- ${result.status} ${result.item}${detail}`);
+	}
+	return lines.join("\n");
 }
 
 async function collectSymlinkEntries(root: string, baseRoot: string): Promise<string[]> {
@@ -150,12 +333,44 @@ function parseTypeFilter(args: string[]): { type?: QuartermasterItemType; error?
 	return { type: candidate as QuartermasterItemType };
 }
 
+function parseItemArgs(args: string[]): { type?: QuartermasterItemType; path?: string; error?: string } {
+	if (args.length !== 2) {
+		return { error: "Expected <type> <path>." };
+	}
+	const [candidate, itemPath] = args;
+	if (!ITEM_TYPES.includes(candidate as QuartermasterItemType)) {
+		return {
+			error: `Unknown item type: ${candidate}. Expected one of ${ITEM_TYPES.join(", ")}.`,
+		};
+	}
+
+	return { type: candidate as QuartermasterItemType, path: itemPath };
+}
+
+function parseSetArgs(args: string[]): { name?: string; error?: string } {
+	if (args.length !== 2) {
+		return { error: "Expected set <name>." };
+	}
+	const [keyword, name] = args;
+	if (keyword !== "set") {
+		return { error: "Expected set <name>." };
+	}
+	if (!name.trim()) {
+		return { error: "Missing set name." };
+	}
+	return { name: name.trim() };
+}
+
 function getUsageMessage(): string {
 	return [
 		"Quartermaster commands:",
 		"  list [type]",
 		"  installed [type]",
 		"  sets",
+		"  install <type> <path>",
+		"  install set <name>",
+		"  remove <type> <path>",
+		"  remove set <name>",
 	].join("\n");
 }
 
@@ -194,6 +409,114 @@ async function handleSets(parsed: QuartermasterParsedArgs, ctx?: QuartermasterCo
 	return { ok: true, message: formatSets(sets, setsPath) };
 }
 
+async function handleInstall(
+	parsed: QuartermasterParsedArgs,
+	ctx?: QuartermasterCommandContext
+): Promise<QuartermasterCommandOutcome> {
+	if (parsed.args.length === 0) {
+		return { ok: false, message: "Expected install <type> <path> or install set <name>." };
+	}
+
+	const config = await resolveQuartermasterConfig({ ctx, prompt: ctx?.prompt });
+	const cwd = process.cwd();
+
+	if (parsed.args[0] === "set") {
+		const { name, error } = parseSetArgs(parsed.args);
+		if (error) {
+			return { ok: false, message: error };
+		}
+
+		const sets = await readQuartermasterSets(config.repoPath, config.setsFile);
+		if (!sets) {
+			const setsPath = path.join(config.repoPath, config.setsFile);
+			return { ok: false, message: `No sets file found at ${setsPath}.` };
+		}
+
+		const targetSet = sets.sets.find((set) => set.name === name);
+		if (!targetSet) {
+			return { ok: false, message: `Unknown set: ${name}.` };
+		}
+
+		const results: QuartermasterItemResult[] = [];
+		for (const entry of flattenSetItems(targetSet)) {
+			try {
+				const resolved = resolveInstallPaths(entry.type, entry.path, config.repoPath, cwd);
+				const outcome = await linkItem(resolved.sourcePath, resolved.targetPath);
+				results.push({ status: outcome.status, item: resolved.displayPath, detail: outcome.detail });
+			} catch (error) {
+				const err = error as Error;
+				results.push({ status: "failed", item: `${entry.type}/${entry.path}`, detail: err.message });
+			}
+		}
+
+		return { ok: true, message: formatItemResults("Install results:", results) };
+	}
+
+	const { type, path: itemPath, error } = parseItemArgs(parsed.args);
+	if (error || !type || !itemPath) {
+		return { ok: false, message: error ?? "Invalid install arguments." };
+	}
+
+	const resolved = resolveInstallPaths(type, itemPath, config.repoPath, cwd);
+	const outcome = await linkItem(resolved.sourcePath, resolved.targetPath);
+	const results = [{ status: outcome.status, item: resolved.displayPath, detail: outcome.detail }];
+	return { ok: true, message: formatItemResults("Install results:", results) };
+}
+
+async function handleRemove(
+	parsed: QuartermasterParsedArgs,
+	ctx?: QuartermasterCommandContext
+): Promise<QuartermasterCommandOutcome> {
+	if (parsed.args.length === 0) {
+		return { ok: false, message: "Expected remove <type> <path> or remove set <name>." };
+	}
+
+	const cwd = process.cwd();
+
+	if (parsed.args[0] === "set") {
+		const { name, error } = parseSetArgs(parsed.args);
+		if (error) {
+			return { ok: false, message: error };
+		}
+
+		const config = await resolveQuartermasterConfig({ ctx, prompt: ctx?.prompt });
+		const sets = await readQuartermasterSets(config.repoPath, config.setsFile);
+		if (!sets) {
+			const setsPath = path.join(config.repoPath, config.setsFile);
+			return { ok: false, message: `No sets file found at ${setsPath}.` };
+		}
+
+		const targetSet = sets.sets.find((set) => set.name === name);
+		if (!targetSet) {
+			return { ok: false, message: `Unknown set: ${name}.` };
+		}
+
+		const results: QuartermasterItemResult[] = [];
+		for (const entry of flattenSetItems(targetSet)) {
+			try {
+				const resolved = resolveRemoveTarget(entry.type, entry.path, cwd);
+				const outcome = await removeItem(resolved.targetPath);
+				results.push({ status: outcome.status, item: resolved.displayPath, detail: outcome.detail });
+			} catch (error) {
+				const err = error as Error;
+				results.push({ status: "failed", item: `${entry.type}/${entry.path}`, detail: err.message });
+			}
+		}
+
+		return { ok: true, message: formatItemResults("Remove results:", results) };
+	}
+
+	const { type, path: itemPath, error } = parseItemArgs(parsed.args);
+	if (error || !type || !itemPath) {
+		return { ok: false, message: error ?? "Invalid remove arguments." };
+	}
+
+	const resolved = resolveRemoveTarget(type, itemPath, cwd);
+	const outcome = await removeItem(resolved.targetPath);
+	const results = [{ status: outcome.status, item: resolved.displayPath, detail: outcome.detail }];
+	return { ok: true, message: formatItemResults("Remove results:", results) };
+}
+
 export const executeQuartermaster: QuartermasterExecute = async (
 	parsed: QuartermasterParsedArgs,
 	context
@@ -206,6 +529,10 @@ export const executeQuartermaster: QuartermasterExecute = async (
 				return await handleInstalled(parsed);
 			case "sets":
 				return await handleSets(parsed, context.ctx);
+			case "install":
+				return await handleInstall(parsed, context.ctx);
+			case "remove":
+				return await handleRemove(parsed, context.ctx);
 			default:
 				return { ok: false, message: getUsageMessage(), parsed };
 		}

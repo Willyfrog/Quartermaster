@@ -26,8 +26,8 @@
   {
     "order": 5,
     "task": "Implement install/remove flows for single items and sets with symlink handling.",
-    "notes": "",
-    "done": false
+    "notes": "Added install/remove command handlers with per-item status reporting, symlink validation, and support for set installs/removals; added tests for single installs, set installs, and removals.",
+    "done": true
   },
   {
     "order": 6,

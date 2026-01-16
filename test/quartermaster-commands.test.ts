@@ -38,6 +38,29 @@ async function createSharedRepo(): Promise<string> {
 	return shared;
 }
 
+async function writeSharedSets(shared: string): Promise<void> {
+	await fs.writeFile(
+		path.join(shared, "quartermaster_sets.json"),
+		JSON.stringify(
+			{
+				version: 1,
+				sets: {
+					writer: {
+						description: "Writing helpers",
+						items: {
+							skills: ["skills/writing-helper"],
+							extensions: ["extensions/spellcheck.ts"],
+							prompts: ["prompts/blog/idea.md"],
+						},
+					},
+				},
+			},
+			null,
+			2
+		)
+	);
+}
+
 test("executeQuartermaster list outputs grouped items", async () => {
 	const shared = await createSharedRepo();
 	const local = await createTempDir("quartermaster-local-");
@@ -119,6 +142,89 @@ test("executeQuartermaster sets lists set counts", async () => {
 		assert.equal(result.ok, true);
 		assert.match(result.message ?? "", /Sets \(version 1\):/u);
 		assert.match(result.message ?? "", /writer \(skills:1 extensions:0 tools:0 prompts:1\) - Writing helpers/u);
+	} finally {
+		await removeTempDir(shared);
+		await removeTempDir(local);
+	}
+});
+
+test("executeQuartermaster install links a single item", async () => {
+	const shared = await createSharedRepo();
+	const local = await createTempDir("quartermaster-local-");
+
+	try {
+		await writeQuartermasterConfig({ repoPath: shared, setsFile: "quartermaster_sets.json" }, local);
+
+		const result = await withCwd(local, async () => {
+			const parsed = parseQuartermasterArgs("install skills skills/writing-helper");
+			return executeQuartermaster(parsed, { source: "cli" });
+		});
+
+		assert.equal(result.ok, true);
+		assert.match(result.message ?? "", /Install results:/u);
+		assert.match(result.message ?? "", /linked skills\/writing-helper/u);
+
+		const linkPath = path.join(local, ".pi", "skills", "writing-helper");
+		const stats = await fs.lstat(linkPath);
+		assert.equal(stats.isSymbolicLink(), true);
+		const linkTarget = await fs.readlink(linkPath);
+		const resolved = path.resolve(path.dirname(linkPath), linkTarget);
+		assert.equal(resolved, path.join(shared, "skills", "writing-helper"));
+	} finally {
+		await removeTempDir(shared);
+		await removeTempDir(local);
+	}
+});
+
+test("executeQuartermaster install set links all items", async () => {
+	const shared = await createSharedRepo();
+	const local = await createTempDir("quartermaster-local-");
+
+	try {
+		await writeSharedSets(shared);
+		await writeQuartermasterConfig({ repoPath: shared, setsFile: "quartermaster_sets.json" }, local);
+
+		const result = await withCwd(local, async () => {
+			const parsed = parseQuartermasterArgs("install set writer");
+			return executeQuartermaster(parsed, { source: "cli" });
+		});
+
+		assert.equal(result.ok, true);
+		assert.match(result.message ?? "", /Install results:/u);
+		assert.match(result.message ?? "", /linked skills\/writing-helper/u);
+		assert.match(result.message ?? "", /linked extensions\/spellcheck\.ts/u);
+		assert.match(result.message ?? "", /linked prompts\/blog\/idea\.md/u);
+
+		const skillLink = path.join(local, ".pi", "skills", "writing-helper");
+		const extensionLink = path.join(local, ".pi", "extensions", "spellcheck.ts");
+		const promptLink = path.join(local, ".pi", "prompts", "blog", "idea.md");
+		assert.equal((await fs.lstat(skillLink)).isSymbolicLink(), true);
+		assert.equal((await fs.lstat(extensionLink)).isSymbolicLink(), true);
+		assert.equal((await fs.lstat(promptLink)).isSymbolicLink(), true);
+	} finally {
+		await removeTempDir(shared);
+		await removeTempDir(local);
+	}
+});
+
+test("executeQuartermaster remove removes symlinked items", async () => {
+	const shared = await createSharedRepo();
+	const local = await createTempDir("quartermaster-local-");
+
+	try {
+		const skillsDir = path.join(local, ".pi", "skills");
+		await fs.mkdir(skillsDir, { recursive: true });
+		await fs.symlink(path.join(shared, "skills", "writing-helper"), path.join(skillsDir, "writing-helper"));
+
+		const result = await withCwd(local, async () => {
+			const parsed = parseQuartermasterArgs("remove skills skills/writing-helper");
+			return executeQuartermaster(parsed, { source: "cli" });
+		});
+
+		assert.equal(result.ok, true);
+		assert.match(result.message ?? "", /Remove results:/u);
+		assert.match(result.message ?? "", /removed skills\/writing-helper/u);
+		await assert.rejects(() => fs.lstat(path.join(skillsDir, "writing-helper")));
 	} finally {
 		await removeTempDir(shared);
 		await removeTempDir(local);
