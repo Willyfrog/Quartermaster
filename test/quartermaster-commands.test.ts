@@ -230,3 +230,64 @@ test("executeQuartermaster remove removes symlinked items", async () => {
 		await removeTempDir(local);
 	}
 });
+
+test("executeQuartermaster add-to-set writes shared sets file", async () => {
+	const shared = await createSharedRepo();
+	const local = await createTempDir("quartermaster-local-");
+
+	try {
+		await writeQuartermasterConfig({ repoPath: shared, setsFile: "quartermaster_sets.json" }, local);
+
+		const result = await withCwd(local, async () => {
+			const parsed = parseQuartermasterArgs("add-to-set writer skills skills/writing-helper");
+			return executeQuartermaster(parsed, { source: "cli" });
+		});
+
+		assert.equal(result.ok, true);
+		assert.match(result.message ?? "", /Set update results:/u);
+		assert.match(result.message ?? "", /added writer skills\/writing-helper/u);
+
+		const raw = JSON.parse(await fs.readFile(path.join(shared, "quartermaster_sets.json"), "utf8")) as {
+			version: number;
+			sets: Record<string, { items: Record<string, string[]> }>;
+		};
+		assert.equal(raw.version, 1);
+		assert.deepEqual(raw.sets.writer.items.skills, ["skills/writing-helper"]);
+		assert.deepEqual(raw.sets.writer.items.extensions, []);
+		assert.deepEqual(raw.sets.writer.items.tools, []);
+		assert.deepEqual(raw.sets.writer.items.prompts, []);
+	} finally {
+		await removeTempDir(shared);
+		await removeTempDir(local);
+	}
+});
+
+test("executeQuartermaster remove-from-set updates shared sets file", async () => {
+	const shared = await createSharedRepo();
+	const local = await createTempDir("quartermaster-local-");
+
+	try {
+		await writeSharedSets(shared);
+		await writeQuartermasterConfig({ repoPath: shared, setsFile: "quartermaster_sets.json" }, local);
+
+		const result = await withCwd(local, async () => {
+			const parsed = parseQuartermasterArgs("remove-from-set writer skills skills/writing-helper");
+			return executeQuartermaster(parsed, { source: "cli" });
+		});
+
+		assert.equal(result.ok, true);
+		assert.match(result.message ?? "", /Set update results:/u);
+		assert.match(result.message ?? "", /removed writer skills\/writing-helper/u);
+
+		const raw = JSON.parse(await fs.readFile(path.join(shared, "quartermaster_sets.json"), "utf8")) as {
+			version: number;
+			sets: Record<string, { items: Record<string, string[]> }>;
+		};
+		assert.deepEqual(raw.sets.writer.items.skills, []);
+		assert.deepEqual(raw.sets.writer.items.extensions, ["extensions/spellcheck.ts"]);
+		assert.deepEqual(raw.sets.writer.items.prompts, ["prompts/blog/idea.md"]);
+	} finally {
+		await removeTempDir(shared);
+		await removeTempDir(local);
+	}
+});

@@ -32,8 +32,8 @@
   {
     "order": 6,
     "task": "Implement add-to-set and remove-from-set editing the shared sets file.",
-    "notes": "",
-    "done": false
+    "notes": "Added shared sets file read/write helpers, normalized add/remove set item paths, extended command routing/usage, and covered with node:test cases for add-to-set and remove-from-set updates.",
+    "done": true
   },
   {
     "order": 7,

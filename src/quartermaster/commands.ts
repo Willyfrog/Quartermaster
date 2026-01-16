@@ -13,6 +13,7 @@ import type {
 	QuartermasterDiscoveredItems,
 	QuartermasterItemType,
 	QuartermasterSetDefinition,
+	QuartermasterSetItems,
 	QuartermasterSets,
 } from "./discovery";
 
@@ -37,6 +38,27 @@ type QuartermasterResolvedInstall = {
 	displayPath: string;
 };
 
+type QuartermasterSetsFileInput = {
+	version?: number;
+	sets?: Record<
+		string,
+		{
+			description?: string;
+			items?: Partial<Record<QuartermasterItemType, string[]>>;
+		}
+	>;
+};
+
+type QuartermasterWritableSet = {
+	description?: string;
+	items: QuartermasterSetItems;
+};
+
+type QuartermasterWritableSets = {
+	version: number;
+	sets: Record<string, QuartermasterWritableSet>;
+};
+
 async function pathExists(targetPath: string): Promise<boolean> {
 	try {
 		await fs.access(targetPath);
@@ -53,6 +75,32 @@ function normalizeRelativePath(basePath: string, targetPath: string): string {
 
 function normalizeInputPath(input: string): string {
 	return input.replace(/\\/gu, "/").replace(/^\.\//u, "").trim();
+}
+
+function normalizeSetItems(items?: Partial<Record<QuartermasterItemType, string[]>>): QuartermasterSetItems {
+	return ITEM_TYPES.reduce<QuartermasterSetItems>((acc, type) => {
+		const entries = items?.[type] ?? [];
+		acc[type] = entries
+			.map((entry) => String(entry).trim())
+			.filter((entry) => entry.length > 0);
+		return acc;
+	}, {} as QuartermasterSetItems);
+}
+
+function normalizeSetPath(type: QuartermasterItemType, input: string): string {
+	const trimmed = input.trim();
+	if (!trimmed) {
+		throw new Error("Missing item path.");
+	}
+	if (isExternalPath(trimmed)) {
+		throw new Error("Set items must be repo-relative paths.");
+	}
+	const normalized = normalizeInputPath(trimmed);
+	const withoutPrefix = stripTypePrefix(type, normalized);
+	if (!withoutPrefix) {
+		throw new Error("Missing item path.");
+	}
+	return normalized.startsWith(`${type}/`) ? normalized : `${type}/${withoutPrefix}`;
 }
 
 function stripTypePrefix(type: QuartermasterItemType, input: string): string {
@@ -157,6 +205,69 @@ function resolveRemoveTarget(
 	const targetPath = path.join(baseRoot, type, ...withoutPrefix.split("/"));
 	const displayPath = normalizeRelativePath(baseRoot, targetPath);
 	return { targetPath, displayPath };
+}
+
+function sortUnique(entries: string[]): string[] {
+	return Array.from(new Set(entries)).sort((a, b) => a.localeCompare(b));
+}
+
+async function readSetsFileForWrite(
+	repoPath: string,
+	setsFile: string,
+	options?: { allowMissing?: boolean }
+): Promise<QuartermasterWritableSets | null> {
+	const setsPath = path.join(repoPath, setsFile);
+	try {
+		const raw = await fs.readFile(setsPath, "utf8");
+		const parsed = JSON.parse(raw) as QuartermasterSetsFileInput;
+		const version = Number(parsed.version ?? 1);
+		if (!Number.isFinite(version) || version <= 0) {
+			throw new Error(`Quartermaster sets file has invalid version: ${version}`);
+		}
+
+		const entries = parsed.sets ?? {};
+		const sets: Record<string, QuartermasterWritableSet> = {};
+		for (const [name, entry] of Object.entries(entries)) {
+			const trimmedName = name.trim();
+			if (!trimmedName) {
+				continue;
+			}
+			sets[trimmedName] = {
+				description: entry.description?.trim() || undefined,
+				items: normalizeSetItems(entry.items),
+			};
+		}
+
+		return { version, sets };
+	} catch (error) {
+		const err = error as NodeJS.ErrnoException;
+		if (err.code === "ENOENT") {
+			return options?.allowMissing ? { version: 1, sets: {} } : null;
+		}
+		throw error;
+	}
+}
+
+async function writeQuartermasterSetsFile(
+	repoPath: string,
+	setsFile: string,
+	sets: QuartermasterWritableSets
+): Promise<void> {
+	const setsPath = path.join(repoPath, setsFile);
+	const sortedSets = Object.fromEntries(
+		Object.keys(sets.sets)
+			.sort((a, b) => a.localeCompare(b))
+			.map((name) => {
+				const entry = sets.sets[name];
+				const items = ITEM_TYPES.reduce<QuartermasterSetItems>((acc, type) => {
+					acc[type] = sortUnique(entry.items[type]);
+					return acc;
+				}, {} as QuartermasterSetItems);
+				return [name, { description: entry.description, items }];
+			})
+	);
+	const payload = { version: sets.version, sets: sortedSets };
+	await fs.writeFile(setsPath, JSON.stringify(payload, null, 2));
 }
 
 function flattenSetItems(set: QuartermasterSetDefinition): Array<{ type: QuartermasterItemType; path: string }> {
@@ -361,6 +472,24 @@ function parseSetArgs(args: string[]): { name?: string; error?: string } {
 	return { name: name.trim() };
 }
 
+function parseSetItemArgs(
+	args: string[]
+): { name?: string; type?: QuartermasterItemType; path?: string; error?: string } {
+	if (args.length !== 3) {
+		return { error: "Expected <set> <type> <path>." };
+	}
+	const [name, candidate, itemPath] = args;
+	if (!name.trim()) {
+		return { error: "Missing set name." };
+	}
+	if (!ITEM_TYPES.includes(candidate as QuartermasterItemType)) {
+		return {
+			error: `Unknown item type: ${candidate}. Expected one of ${ITEM_TYPES.join(", ")}.`,
+		};
+	}
+	return { name: name.trim(), type: candidate as QuartermasterItemType, path: itemPath };
+}
+
 function getUsageMessage(): string {
 	return [
 		"Quartermaster commands:",
@@ -371,6 +500,8 @@ function getUsageMessage(): string {
 		"  install set <name>",
 		"  remove <type> <path>",
 		"  remove set <name>",
+		"  add-to-set <set> <type> <path>",
+		"  remove-from-set <set> <type> <path>",
 	].join("\n");
 }
 
@@ -517,6 +648,72 @@ async function handleRemove(
 	return { ok: true, message: formatItemResults("Remove results:", results) };
 }
 
+async function handleAddToSet(
+	parsed: QuartermasterParsedArgs,
+	ctx?: QuartermasterCommandContext
+): Promise<QuartermasterCommandOutcome> {
+	const { name, type, path: itemPath, error } = parseSetItemArgs(parsed.args);
+	if (error || !name || !type || !itemPath) {
+		return { ok: false, message: error ?? "Invalid add-to-set arguments." };
+	}
+
+	const config = await resolveQuartermasterConfig({ ctx, prompt: ctx?.prompt });
+	const sets = await readSetsFileForWrite(config.repoPath, config.setsFile, { allowMissing: true });
+	if (!sets) {
+		const setsPath = path.join(config.repoPath, config.setsFile);
+		return { ok: false, message: `No sets file found at ${setsPath}.` };
+	}
+
+	const normalizedPath = normalizeSetPath(type, itemPath);
+	const targetSet = sets.sets[name] ?? { items: normalizeSetItems() };
+	const existing = targetSet.items[type].includes(normalizedPath);
+	if (!existing) {
+		targetSet.items[type] = sortUnique([...targetSet.items[type], normalizedPath]);
+	}
+
+	sets.sets[name] = targetSet;
+	await writeQuartermasterSetsFile(config.repoPath, config.setsFile, sets);
+
+	const status = existing ? "already present" : "added";
+	const results = [{ status, item: `${name} ${normalizedPath}` }];
+	return { ok: true, message: formatItemResults("Set update results:", results) };
+}
+
+async function handleRemoveFromSet(
+	parsed: QuartermasterParsedArgs,
+	ctx?: QuartermasterCommandContext
+): Promise<QuartermasterCommandOutcome> {
+	const { name, type, path: itemPath, error } = parseSetItemArgs(parsed.args);
+	if (error || !name || !type || !itemPath) {
+		return { ok: false, message: error ?? "Invalid remove-from-set arguments." };
+	}
+
+	const config = await resolveQuartermasterConfig({ ctx, prompt: ctx?.prompt });
+	const sets = await readSetsFileForWrite(config.repoPath, config.setsFile);
+	if (!sets) {
+		const setsPath = path.join(config.repoPath, config.setsFile);
+		return { ok: false, message: `No sets file found at ${setsPath}.` };
+	}
+
+	const targetSet = sets.sets[name];
+	if (!targetSet) {
+		return { ok: false, message: `Unknown set: ${name}.` };
+	}
+
+	const normalizedPath = normalizeSetPath(type, itemPath);
+	const existing = targetSet.items[type].includes(normalizedPath);
+	if (existing) {
+		targetSet.items[type] = targetSet.items[type].filter((entry) => entry !== normalizedPath);
+	}
+
+	sets.sets[name] = targetSet;
+	await writeQuartermasterSetsFile(config.repoPath, config.setsFile, sets);
+
+	const status = existing ? "removed" : "missing";
+	const results = [{ status, item: `${name} ${normalizedPath}` }];
+	return { ok: true, message: formatItemResults("Set update results:", results) };
+}
+
 export const executeQuartermaster: QuartermasterExecute = async (
 	parsed: QuartermasterParsedArgs,
 	context
@@ -533,6 +730,10 @@ export const executeQuartermaster: QuartermasterExecute = async (
 				return await handleInstall(parsed, context.ctx);
 			case "remove":
 				return await handleRemove(parsed, context.ctx);
+			case "add-to-set":
+				return await handleAddToSet(parsed, context.ctx);
+			case "remove-from-set":
+				return await handleRemoveFromSet(parsed, context.ctx);
 			default:
 				return { ok: false, message: getUsageMessage(), parsed };
 		}
