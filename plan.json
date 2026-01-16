@@ -20,8 +20,8 @@
   {
     "order": 4,
     "task": "Implement core commands: list, installed, sets with grouped output.",
-    "notes": "",
-    "done": false
+    "notes": "Added command execution for list/installed/sets with grouped output, config-aware list/sets, symlink-only installed discovery, and wired entrypoints; added node:test coverage for list, installed, and sets output.",
+    "done": true
   },
   {
     "order": 5,
