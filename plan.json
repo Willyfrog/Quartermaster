@@ -38,7 +38,7 @@
   {
     "order": 7,
     "task": "Add minimal validation/errors and update docs/examples if required.",
-    "notes": "",
-    "done": false
+    "notes": "Validated Quartermaster repo paths are real directories (including existing configs) with clearer error messaging and added tests for invalid paths; no doc updates were needed.",
+    "done": true
   }
 ]

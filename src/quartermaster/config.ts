@@ -40,6 +40,21 @@ function normalizeConfig(config: QuartermasterConfigInput): QuartermasterConfig 
 	};
 }
 
+async function validateRepoPath(repoPath: string): Promise<void> {
+	try {
+		const stats = await fs.stat(repoPath);
+		if (!stats.isDirectory()) {
+			throw new Error(`Quartermaster repo path is not a directory: ${repoPath}`);
+		}
+	} catch (error) {
+		const err = error as NodeJS.ErrnoException;
+		if (err.code === "ENOENT") {
+			throw new Error(`Quartermaster repo path does not exist: ${repoPath}`);
+		}
+		throw error;
+	}
+}
+
 export function getQuartermasterConfigPath(cwd: string = process.cwd()): string {
 	return path.join(cwd, ".pi", CONFIG_FILENAME);
 }
@@ -66,7 +81,7 @@ export async function writeQuartermasterConfig(
 	cwd: string = process.cwd()
 ): Promise<QuartermasterConfig> {
 	const normalized = normalizeConfig(config);
-	await fs.stat(normalized.repoPath);
+	await validateRepoPath(normalized.repoPath);
 	const configPath = getQuartermasterConfigPath(cwd);
 	await fs.mkdir(path.dirname(configPath), { recursive: true });
 	await fs.writeFile(configPath, `${JSON.stringify(normalized, null, 2)}\n`, "utf8");
@@ -85,6 +100,7 @@ export async function resolveQuartermasterConfig(
 	}
 
 	if (existing) {
+		await validateRepoPath(existing.repoPath);
 		return { repoPath: existing.repoPath, setsFile };
 	}
 

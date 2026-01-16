@@ -41,6 +41,14 @@ test("writeQuartermasterConfig persists normalized config", async () => {
 	});
 });
 
+test("writeQuartermasterConfig rejects non-directory repo path", async () => {
+	await withTempDir(async (dir) => {
+		const filePath = path.join(dir, "repo.txt");
+		await fs.writeFile(filePath, "not a dir");
+		await assert.rejects(() => writeQuartermasterConfig({ repoPath: filePath }, dir), /not a directory/u);
+	});
+});
+
 test("resolveQuartermasterConfig writes override with default sets file", async () => {
 	await withTempDir(async (dir) => {
 		const sharedRepo = await fs.mkdtemp(path.join(dir, "shared-"));
@@ -50,6 +58,20 @@ test("resolveQuartermasterConfig writes override with default sets file", async 
 
 		const stored = await readQuartermasterConfig(dir);
 		assert.equal(stored?.repoPath, sharedRepo);
+	});
+});
+
+test("resolveQuartermasterConfig errors when repo path missing", async () => {
+	await withTempDir(async (dir) => {
+		const missingPath = path.join(dir, "missing-repo");
+		const configPath = getQuartermasterConfigPath(dir);
+		await fs.mkdir(path.dirname(configPath), { recursive: true });
+		await fs.writeFile(
+			configPath,
+			JSON.stringify({ repoPath: missingPath, setsFile: DEFAULT_SETS_FILE }, null, 2),
+			"utf8"
+		);
+		await assert.rejects(() => resolveQuartermasterConfig({ cwd: dir }), /does not exist/u);
 	});
 });
 
