@@ -19,10 +19,16 @@ mkdir -p .pi/extensions
 ln -s /absolute/path/to/quartermaster/src/quartermaster/extension.ts .pi/extensions/quartermaster.ts
 ```
 
-Start Pi and run:
+Start Pi and run (interactive prompt):
 
 ```text
 /quartermaster setup
+```
+
+Or pass the repo path (and optional sets file):
+
+```text
+/quartermaster setup /absolute/path/to/shared-repo quartermaster_sets.json
 ```
 
 ### Global install
@@ -100,7 +106,7 @@ Example `quartermaster_sets.json`:
 Once installed, the command is available via Pi’s CLI as well:
 
 ```bash
-pi quartermaster setup
+pi quartermaster setup /absolute/path/to/shared-repo quartermaster_sets.json
 pi quartermaster list
 pi quartermaster install set writer
 ```
@@ -120,5 +126,5 @@ pi quartermaster install set writer
 ## Quick Start
 
 1. Install the extension (project-local or global).
-2. Run `/quartermaster setup` to point Quartermaster at your shared repo.
+2. Run `/quartermaster setup` and enter your shared repo path when prompted (or provide it as an argument).
 3. Use `/quartermaster list`, `/quartermaster install`, etc. to manage items.
