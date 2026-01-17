@@ -493,6 +493,7 @@ function parseSetItemArgs(
 function getUsageMessage(): string {
 	return [
 		"Quartermaster commands:",
+		"  setup [repoPath] [setsFile]",
 		"  list [type]",
 		"  installed [type]",
 		"  sets",
@@ -538,6 +539,55 @@ async function handleSets(parsed: QuartermasterParsedArgs, ctx?: QuartermasterCo
 	const sets = await readQuartermasterSets(config.repoPath, config.setsFile);
 	const setsPath = path.join(config.repoPath, config.setsFile);
 	return { ok: true, message: formatSets(sets, setsPath) };
+}
+
+async function handleSetup(parsed: QuartermasterParsedArgs, ctx?: QuartermasterCommandContext): Promise<QuartermasterCommandOutcome> {
+	if (parsed.args.length > 2) {
+		return { ok: false, message: "Too many arguments provided." };
+	}
+
+	const [repoArg, setsFileArg] = parsed.args;
+	let repoPath = repoArg?.trim();
+	let setsFile = setsFileArg?.trim() || undefined;
+
+	if (!repoPath) {
+		if (!ctx?.hasUI) {
+			return {
+				ok: false,
+				message: "Quartermaster setup requires a repo path in non-interactive mode.",
+			};
+		}
+		if (!ctx.prompt) {
+			throw new Error("Interactive prompt unavailable for Quartermaster setup.");
+		}
+		repoPath = String(await ctx.prompt("Path to shared Quartermaster repo:"))?.trim();
+		if (!repoPath) {
+			return { ok: false, message: "Quartermaster repo path is required." };
+		}
+		if (!setsFile) {
+			const response = await ctx.prompt(
+				"Sets file name (optional, default quartermaster_sets.json):"
+			);
+			const candidate = String(response ?? "").trim();
+			if (candidate) {
+				setsFile = candidate;
+			}
+		}
+	}
+
+	const config = await resolveQuartermasterConfig({
+		ctx,
+		prompt: ctx?.prompt,
+		repoOverride: repoPath,
+		setsFileOverride: setsFile,
+	});
+
+	const setsPath = path.join(config.repoPath, config.setsFile);
+	const lines = [`Quartermaster configured for ${config.repoPath}.`];
+	if (!(await pathExists(setsPath))) {
+		lines.push(`Warning: sets file not found at ${setsPath}.`);
+	}
+	return { ok: true, message: lines.join("\n") };
 }
 
 async function handleInstall(
@@ -726,6 +776,8 @@ export const executeQuartermaster: QuartermasterExecute = async (
 				return await handleInstalled(parsed);
 			case "sets":
 				return await handleSets(parsed, context.ctx);
+			case "setup":
+				return await handleSetup(parsed, context.ctx);
 			case "install":
 				return await handleInstall(parsed, context.ctx);
 			case "remove":

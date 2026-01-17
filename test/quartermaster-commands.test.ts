@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { writeQuartermasterConfig } from "../src/quartermaster/config";
+import { readQuartermasterConfig, writeQuartermasterConfig } from "../src/quartermaster/config";
 import { executeQuartermaster } from "../src/quartermaster/commands";
 import { parseQuartermasterArgs } from "../src/quartermaster/entrypoints";
 
@@ -144,6 +144,73 @@ test("executeQuartermaster sets lists set counts", async () => {
 		assert.match(result.message ?? "", /writer \(skills:1 extensions:0 tools:0 prompts:1\) - Writing helpers/u);
 	} finally {
 		await removeTempDir(shared);
+		await removeTempDir(local);
+	}
+});
+
+test("executeQuartermaster setup prompts for repo path", async () => {
+	const shared = await createSharedRepo();
+	const local = await createTempDir("quartermaster-local-");
+	let promptCount = 0;
+
+	try {
+		const result = await withCwd(local, async () => {
+			const parsed = parseQuartermasterArgs("setup");
+			return executeQuartermaster(parsed, {
+				source: "command",
+				ctx: {
+					hasUI: true,
+					prompt: () => {
+						promptCount += 1;
+						return promptCount === 1 ? shared : "";
+					},
+				},
+			});
+		});
+
+		assert.equal(result.ok, true);
+		assert.match(result.message ?? "", /Quartermaster configured for/u);
+		const config = await readQuartermasterConfig(local);
+		assert.equal(config?.repoPath, shared);
+		assert.equal(config?.setsFile, "quartermaster_sets.json");
+	} finally {
+		await removeTempDir(shared);
+		await removeTempDir(local);
+	}
+});
+
+test("executeQuartermaster setup accepts arguments", async () => {
+	const shared = await createSharedRepo();
+	const local = await createTempDir("quartermaster-local-");
+
+	try {
+		const result = await withCwd(local, async () => {
+			const parsed = parseQuartermasterArgs(`setup ${shared} custom_sets.json`);
+			return executeQuartermaster(parsed, { source: "cli" });
+		});
+
+		assert.equal(result.ok, true);
+		const config = await readQuartermasterConfig(local);
+		assert.equal(config?.repoPath, shared);
+		assert.equal(config?.setsFile, "custom_sets.json");
+	} finally {
+		await removeTempDir(shared);
+		await removeTempDir(local);
+	}
+});
+
+test("executeQuartermaster setup errors without UI or args", async () => {
+	const local = await createTempDir("quartermaster-local-");
+
+	try {
+		const result = await withCwd(local, async () => {
+			const parsed = parseQuartermasterArgs("setup");
+			return executeQuartermaster(parsed, { source: "cli" });
+		});
+
+		assert.equal(result.ok, false);
+		assert.match(result.message ?? "", /requires a repo path/u);
+	} finally {
 		await removeTempDir(local);
 	}
 });
