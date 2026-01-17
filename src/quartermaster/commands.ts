@@ -610,20 +610,69 @@ async function handleSetup(parsed: QuartermasterParsedArgs, ctx?: QuartermasterC
 	return { ok: true, message: lines.join("\n") };
 }
 
+async function promptInstallArgs(
+	ctx: QuartermasterCommandContext | undefined,
+	prompt: ((message: string) => Promise<string> | string) | undefined
+): Promise<{ args?: string[]; error?: string }> {
+	if (!ctx?.hasUI) {
+		return { error: "Expected install <type> <path> or install set <name>." };
+	}
+	if (!prompt) {
+		return { error: "Interactive prompt unavailable for Quartermaster install." };
+	}
+
+	const typeInput = String(
+		await prompt("Install type (skills/extensions/tools/prompts/set):")
+	).trim();
+	if (!typeInput) {
+		return { error: "Install type is required." };
+	}
+
+	if (typeInput === "set") {
+		const name = String(await prompt("Set name:"))?.trim();
+		if (!name) {
+			return { error: "Set name is required." };
+		}
+		return { args: ["set", name] };
+	}
+
+	if (!ITEM_TYPES.includes(typeInput as QuartermasterItemType)) {
+		return {
+			error: `Unknown item type: ${typeInput}. Expected one of ${ITEM_TYPES.join(", ")} or set.`,
+		};
+	}
+
+	const itemPath = String(await prompt("Item path (relative to shared repo):"))?.trim();
+	if (!itemPath) {
+		return { error: "Item path is required." };
+	}
+	return { args: [typeInput, itemPath] };
+}
+
 async function handleInstall(
 	parsed: QuartermasterParsedArgs,
 	ctx?: QuartermasterCommandContext
 ): Promise<QuartermasterCommandOutcome> {
-	if (parsed.args.length === 0) {
+	let args = parsed.args;
+	const prompt = getPrompt(ctx);
+
+	if (args.length === 0) {
+		const prompted = await promptInstallArgs(ctx, prompt);
+		if (prompted.error) {
+			return { ok: false, message: prompted.error };
+		}
+		args = prompted.args ?? [];
+	}
+
+	if (args.length === 0) {
 		return { ok: false, message: "Expected install <type> <path> or install set <name>." };
 	}
 
-	const prompt = getPrompt(ctx);
 	const config = await resolveQuartermasterConfig({ ctx, prompt });
 	const cwd = process.cwd();
 
-	if (parsed.args[0] === "set") {
-		const { name, error } = parseSetArgs(parsed.args);
+	if (args[0] === "set") {
+		const { name, error } = parseSetArgs(args);
 		if (error) {
 			return { ok: false, message: error };
 		}
@@ -662,7 +711,7 @@ async function handleInstall(
 		return { ok: true, message: formatItemResults("Install results:", results) };
 	}
 
-	const { type, path: itemPath, error } = parseItemArgs(parsed.args);
+	const { type, path: itemPath, error } = parseItemArgs(args);
 	if (error || !type || !itemPath) {
 		return { ok: false, message: error ?? "Invalid install arguments." };
 	}

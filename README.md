@@ -117,6 +117,7 @@ pi quartermaster install set writer
 /quartermaster setup
 /quartermaster list
 /quartermaster sets
+/quartermaster install             # prompts for type/path
 /quartermaster install set writer
 /quartermaster install prompts prompts/blog/idea-generator.md
 /quartermaster remove tools tools/pr-comment.ts

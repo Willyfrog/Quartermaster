@@ -246,6 +246,45 @@ test("executeQuartermaster install links a single item", async () => {
 	}
 });
 
+test("executeQuartermaster install prompts for args", async () => {
+	const shared = await createSharedRepo();
+	const local = await createTempDir("quartermaster-local-");
+	let promptCount = 0;
+
+	try {
+		await writeQuartermasterConfig({ repoPath: shared, setsFile: "quartermaster_sets.json" }, local);
+
+		const result = await withCwd(local, async () => {
+			const parsed = parseQuartermasterArgs("install");
+			return executeQuartermaster(parsed, {
+				source: "command",
+				ctx: {
+					hasUI: true,
+					ui: {
+						input: () => {
+							promptCount += 1;
+							if (promptCount === 1) {
+								return "skills";
+							}
+							return "writing-helper";
+						},
+						notify: () => {},
+					},
+				},
+			});
+		});
+
+		assert.equal(result.ok, true);
+		assert.match(result.message ?? "", /linked writing-helper/u);
+		const linkPath = path.join(local, ".pi", "skills", "writing-helper");
+		const stats = await fs.lstat(linkPath);
+		assert.equal(stats.isSymbolicLink(), true);
+	} finally {
+		await removeTempDir(shared);
+		await removeTempDir(local);
+	}
+});
+
 test("executeQuartermaster install set links all items", async () => {
 	const shared = await createSharedRepo();
 	const local = await createTempDir("quartermaster-local-");
