@@ -341,6 +341,10 @@ function formatItemResults(header: string, results: QuartermasterItemResult[]): 
 	return lines.join("\n");
 }
 
+function formatItemDisplay(type: QuartermasterItemType, itemPath: string): string {
+	return stripTypePrefix(type, itemPath);
+}
+
 async function collectSymlinkEntries(root: string, baseRoot: string): Promise<string[]> {
 	if (!(await pathExists(root))) {
 		return [];
@@ -640,10 +644,18 @@ async function handleInstall(
 			try {
 				const resolved = resolveInstallPaths(entry.type, entry.path, config.repoPath, cwd);
 				const outcome = await linkItem(resolved.sourcePath, resolved.targetPath);
-				results.push({ status: outcome.status, item: resolved.displayPath, detail: outcome.detail });
+				results.push({
+					status: outcome.status,
+					item: formatItemDisplay(entry.type, resolved.displayPath),
+					detail: outcome.detail,
+				});
 			} catch (error) {
 				const err = error as Error;
-				results.push({ status: "failed", item: `${entry.type}/${entry.path}`, detail: err.message });
+				results.push({
+					status: "failed",
+					item: formatItemDisplay(entry.type, entry.path),
+					detail: err.message,
+				});
 			}
 		}
 
@@ -657,7 +669,13 @@ async function handleInstall(
 
 	const resolved = resolveInstallPaths(type, itemPath, config.repoPath, cwd);
 	const outcome = await linkItem(resolved.sourcePath, resolved.targetPath);
-	const results = [{ status: outcome.status, item: resolved.displayPath, detail: outcome.detail }];
+	const results = [
+		{
+			status: outcome.status,
+			item: formatItemDisplay(type, resolved.displayPath),
+			detail: outcome.detail,
+		},
+	];
 	return { ok: true, message: formatItemResults("Install results:", results) };
 }
 
@@ -695,10 +713,18 @@ async function handleRemove(
 			try {
 				const resolved = resolveRemoveTarget(entry.type, entry.path, cwd);
 				const outcome = await removeItem(resolved.targetPath);
-				results.push({ status: outcome.status, item: resolved.displayPath, detail: outcome.detail });
+				results.push({
+					status: outcome.status,
+					item: formatItemDisplay(entry.type, resolved.displayPath),
+					detail: outcome.detail,
+				});
 			} catch (error) {
 				const err = error as Error;
-				results.push({ status: "failed", item: `${entry.type}/${entry.path}`, detail: err.message });
+				results.push({
+					status: "failed",
+					item: formatItemDisplay(entry.type, entry.path),
+					detail: err.message,
+				});
 			}
 		}
 
@@ -712,7 +738,13 @@ async function handleRemove(
 
 	const resolved = resolveRemoveTarget(type, itemPath, cwd);
 	const outcome = await removeItem(resolved.targetPath);
-	const results = [{ status: outcome.status, item: resolved.displayPath, detail: outcome.detail }];
+	const results = [
+		{
+			status: outcome.status,
+			item: formatItemDisplay(type, resolved.displayPath),
+			detail: outcome.detail,
+		},
+	];
 	return { ok: true, message: formatItemResults("Remove results:", results) };
 }
 

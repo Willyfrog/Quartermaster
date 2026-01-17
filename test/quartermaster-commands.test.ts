@@ -232,7 +232,7 @@ test("executeQuartermaster install links a single item", async () => {
 
 		assert.equal(result.ok, true);
 		assert.match(result.message ?? "", /Install results:/u);
-		assert.match(result.message ?? "", /linked skills\/writing-helper/u);
+		assert.match(result.message ?? "", /linked writing-helper/u);
 
 		const linkPath = path.join(local, ".pi", "skills", "writing-helper");
 		const stats = await fs.lstat(linkPath);
@@ -261,9 +261,9 @@ test("executeQuartermaster install set links all items", async () => {
 
 		assert.equal(result.ok, true);
 		assert.match(result.message ?? "", /Install results:/u);
-		assert.match(result.message ?? "", /linked skills\/writing-helper/u);
-		assert.match(result.message ?? "", /linked extensions\/spellcheck\.ts/u);
-		assert.match(result.message ?? "", /linked prompts\/blog\/idea\.md/u);
+		assert.match(result.message ?? "", /linked writing-helper/u);
+		assert.match(result.message ?? "", /linked spellcheck\.ts/u);
+		assert.match(result.message ?? "", /linked blog\/idea\.md/u);
 
 		const skillLink = path.join(local, ".pi", "skills", "writing-helper");
 		const extensionLink = path.join(local, ".pi", "extensions", "spellcheck.ts");
@@ -293,7 +293,7 @@ test("executeQuartermaster remove removes symlinked items", async () => {
 
 		assert.equal(result.ok, true);
 		assert.match(result.message ?? "", /Remove results:/u);
-		assert.match(result.message ?? "", /removed skills\/writing-helper/u);
+		assert.match(result.message ?? "", /removed writing-helper/u);
 		await assert.rejects(() => fs.lstat(path.join(skillsDir, "writing-helper")));
 	} finally {
 		await removeTempDir(shared);
