@@ -13,6 +13,7 @@ type QuartermasterCommandContext = {
 	prompt?: (message: string) => Promise<string> | string;
 	ui?: {
 		notify: (message: string, level: "info" | "error") => void;
+		input?: (message: string) => Promise<string | undefined> | string | undefined;
 	};
 };
 

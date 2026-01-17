@@ -490,6 +490,19 @@ function parseSetItemArgs(
 	return { name: name.trim(), type: candidate as QuartermasterItemType, path: itemPath };
 }
 
+function getPrompt(ctx?: QuartermasterCommandContext): ((message: string) => Promise<string> | string) | undefined {
+	if (!ctx) {
+		return undefined;
+	}
+	if (ctx.prompt) {
+		return ctx.prompt;
+	}
+	if (ctx.ui?.input) {
+		return ctx.ui.input;
+	}
+	return undefined;
+}
+
 function getUsageMessage(): string {
 	return [
 		"Quartermaster commands:",
@@ -512,7 +525,8 @@ async function handleList(parsed: QuartermasterParsedArgs, ctx?: QuartermasterCo
 		return { ok: false, message: error };
 	}
 
-	const config = await resolveQuartermasterConfig({ ctx, prompt: ctx?.prompt });
+	const prompt = getPrompt(ctx);
+	const config = await resolveQuartermasterConfig({ ctx, prompt });
 	const items = await discoverQuartermasterItems(config.repoPath);
 	const grouped = groupDiscoveredItems(items);
 	const types = type ? [type] : ITEM_TYPES;
@@ -535,7 +549,8 @@ async function handleSets(parsed: QuartermasterParsedArgs, ctx?: QuartermasterCo
 		return { ok: false, message: "Too many arguments provided." };
 	}
 
-	const config = await resolveQuartermasterConfig({ ctx, prompt: ctx?.prompt });
+	const prompt = getPrompt(ctx);
+	const config = await resolveQuartermasterConfig({ ctx, prompt });
 	const sets = await readQuartermasterSets(config.repoPath, config.setsFile);
 	const setsPath = path.join(config.repoPath, config.setsFile);
 	return { ok: true, message: formatSets(sets, setsPath) };
@@ -550,6 +565,7 @@ async function handleSetup(parsed: QuartermasterParsedArgs, ctx?: QuartermasterC
 	let repoPath = repoArg?.trim();
 	let setsFile = setsFileArg?.trim() || undefined;
 
+	const prompt = getPrompt(ctx);
 	if (!repoPath) {
 		if (!ctx?.hasUI) {
 			return {
@@ -557,15 +573,15 @@ async function handleSetup(parsed: QuartermasterParsedArgs, ctx?: QuartermasterC
 				message: "Quartermaster setup requires a repo path in non-interactive mode.",
 			};
 		}
-		if (!ctx.prompt) {
+		if (!prompt) {
 			throw new Error("Interactive prompt unavailable for Quartermaster setup.");
 		}
-		repoPath = String(await ctx.prompt("Path to shared Quartermaster repo:"))?.trim();
+		repoPath = String(await prompt("Path to shared Quartermaster repo:"))?.trim();
 		if (!repoPath) {
 			return { ok: false, message: "Quartermaster repo path is required." };
 		}
 		if (!setsFile) {
-			const response = await ctx.prompt(
+			const response = await prompt(
 				"Sets file name (optional, default quartermaster_sets.json):"
 			);
 			const candidate = String(response ?? "").trim();
@@ -577,7 +593,7 @@ async function handleSetup(parsed: QuartermasterParsedArgs, ctx?: QuartermasterC
 
 	const config = await resolveQuartermasterConfig({
 		ctx,
-		prompt: ctx?.prompt,
+		prompt,
 		repoOverride: repoPath,
 		setsFileOverride: setsFile,
 	});
@@ -598,7 +614,8 @@ async function handleInstall(
 		return { ok: false, message: "Expected install <type> <path> or install set <name>." };
 	}
 
-	const config = await resolveQuartermasterConfig({ ctx, prompt: ctx?.prompt });
+	const prompt = getPrompt(ctx);
+	const config = await resolveQuartermasterConfig({ ctx, prompt });
 	const cwd = process.cwd();
 
 	if (parsed.args[0] === "set") {
@@ -660,7 +677,8 @@ async function handleRemove(
 			return { ok: false, message: error };
 		}
 
-		const config = await resolveQuartermasterConfig({ ctx, prompt: ctx?.prompt });
+		const prompt = getPrompt(ctx);
+		const config = await resolveQuartermasterConfig({ ctx, prompt });
 		const sets = await readQuartermasterSets(config.repoPath, config.setsFile);
 		if (!sets) {
 			const setsPath = path.join(config.repoPath, config.setsFile);
@@ -707,7 +725,8 @@ async function handleAddToSet(
 		return { ok: false, message: error ?? "Invalid add-to-set arguments." };
 	}
 
-	const config = await resolveQuartermasterConfig({ ctx, prompt: ctx?.prompt });
+	const prompt = getPrompt(ctx);
+	const config = await resolveQuartermasterConfig({ ctx, prompt });
 	const sets = await readSetsFileForWrite(config.repoPath, config.setsFile, { allowMissing: true });
 	if (!sets) {
 		const setsPath = path.join(config.repoPath, config.setsFile);
@@ -738,7 +757,8 @@ async function handleRemoveFromSet(
 		return { ok: false, message: error ?? "Invalid remove-from-set arguments." };
 	}
 
-	const config = await resolveQuartermasterConfig({ ctx, prompt: ctx?.prompt });
+	const prompt = getPrompt(ctx);
+	const config = await resolveQuartermasterConfig({ ctx, prompt });
 	const sets = await readSetsFileForWrite(config.repoPath, config.setsFile);
 	if (!sets) {
 		const setsPath = path.join(config.repoPath, config.setsFile);

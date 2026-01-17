@@ -160,9 +160,12 @@ test("executeQuartermaster setup prompts for repo path", async () => {
 				source: "command",
 				ctx: {
 					hasUI: true,
-					prompt: () => {
-						promptCount += 1;
-						return promptCount === 1 ? shared : "";
+					ui: {
+						input: () => {
+							promptCount += 1;
+							return promptCount === 1 ? shared : "";
+						},
+						notify: () => {},
 					},
 				},
 			});
