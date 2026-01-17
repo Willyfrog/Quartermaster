@@ -75,10 +75,10 @@ test("executeQuartermaster list outputs grouped items", async () => {
 
 		assert.equal(result.ok, true);
 		assert.match(result.message ?? "", /Available items:/u);
-		assert.match(result.message ?? "", /skills\/writing-helper/u);
-		assert.match(result.message ?? "", /extensions\/spellcheck\.ts/u);
-		assert.match(result.message ?? "", /tools\/pr-comment\.ts/u);
-		assert.match(result.message ?? "", /prompts\/blog\/idea\.md/u);
+		assert.match(result.message ?? "", /\bwriting-helper\b/u);
+		assert.match(result.message ?? "", /\bspellcheck\.ts\b/u);
+		assert.match(result.message ?? "", /\bpr-comment\.ts\b/u);
+		assert.match(result.message ?? "", /\bblog\/idea\.md\b/u);
 	} finally {
 		await removeTempDir(shared);
 		await removeTempDir(local);

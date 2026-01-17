@@ -138,7 +138,7 @@ function emptyGroupedItems(): QuartermasterGroupedItems {
 
 function groupDiscoveredItems(items: QuartermasterDiscoveredItems): QuartermasterGroupedItems {
 	return ITEM_TYPES.reduce((acc, type) => {
-		acc[type] = items[type].map((item) => item.path);
+		acc[type] = items[type].map((item) => stripTypePrefix(type, item.path));
 		return acc;
 	}, {} as QuartermasterGroupedItems);
 }
