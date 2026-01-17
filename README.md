@@ -42,6 +42,27 @@ Or pass it on the command line:
 pi --extension /absolute/path/to/quartermaster/src/quartermaster/extension.ts
 ```
 
+### Install from GitHub release (bundle)
+
+If you download a release asset (the single-file bundle), drop it into your project’s `.pi/extensions/` folder:
+
+```bash
+mkdir -p .pi/extensions
+curl -L -o .pi/extensions/quartermaster.bundle.js \
+  https://github.com/<org>/<repo>/releases/download/vX.Y.Z/quartermaster.bundle.js
+```
+
+Pi auto-discovers `.js` files in `.pi/extensions`, so no extra configuration is needed.
+
+### Build bundle (maintainers)
+
+```bash
+npm install
+npm run build
+```
+
+Outputs `dist/quartermaster.bundle.js` for release uploads.
+
 ## Shared Repo Layout
 
 Quartermaster expects a shared local repo with a sets file and typed folders:
