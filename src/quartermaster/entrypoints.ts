@@ -18,7 +18,6 @@ type QuartermasterCommandContext = {
 };
 
 type QuartermasterExecuteContext = {
-	source: "command" | "cli";
 	ctx?: QuartermasterCommandContext;
 };
 
@@ -72,7 +71,7 @@ async function defaultExecute(
 ): Promise<QuartermasterExecuteResult> {
 	return {
 		ok: false,
-		message: `Quartermaster is not implemented yet (source: ${context.source}).`,
+		message: "Quartermaster is not implemented yet.",
 		parsed,
 	};
 }
@@ -93,7 +92,7 @@ export function registerQuartermasterCommand(
 		description: "Manage shared skills, extensions, tools, and prompts",
 		handler: async (args, ctx) => {
 			const parsed = parseQuartermasterArgs(args ?? "");
-			const result = await execute(parsed, { source: "command", ctx });
+			const result = await execute(parsed, { ctx });
 			if (result?.message) {
 				notifyIfPossible(ctx, result.message, result.ok);
 			}
@@ -101,19 +100,10 @@ export function registerQuartermasterCommand(
 	});
 }
 
-export async function runQuartermasterCli(
-	argv: QuartermasterArgsInput,
-	execute: QuartermasterExecute = defaultExecute
-): Promise<QuartermasterExecuteResult> {
-	const parsed = parseQuartermasterArgs(argv);
-	return execute(parsed, { source: "cli" });
-}
-
 export type {
 	QuartermasterArgsInput,
 	QuartermasterCommandContext,
 	QuartermasterExecute,
-	QuartermasterExecuteContext,
 	QuartermasterExecuteResult,
 	QuartermasterParsedArgs,
 	QuartermasterExtensionApi,

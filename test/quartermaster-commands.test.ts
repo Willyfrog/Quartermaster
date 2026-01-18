@@ -70,7 +70,7 @@ test("executeQuartermaster list outputs grouped items", async () => {
 
 		const result = await withCwd(local, async () => {
 			const parsed = parseQuartermasterArgs("list");
-			return executeQuartermaster(parsed, { source: "cli" });
+			return executeQuartermaster(parsed, {});
 		});
 
 		assert.equal(result.ok, true);
@@ -96,7 +96,7 @@ test("executeQuartermaster installed reports symlinked items", async () => {
 
 		const result = await withCwd(local, async () => {
 			const parsed = parseQuartermasterArgs("installed");
-			return executeQuartermaster(parsed, { source: "cli" });
+			return executeQuartermaster(parsed, {});
 		});
 
 		assert.equal(result.ok, true);
@@ -136,7 +136,7 @@ test("executeQuartermaster sets lists set counts", async () => {
 
 		const result = await withCwd(local, async () => {
 			const parsed = parseQuartermasterArgs("sets");
-			return executeQuartermaster(parsed, { source: "cli" });
+			return executeQuartermaster(parsed, {});
 		});
 
 		assert.equal(result.ok, true);
@@ -189,7 +189,7 @@ test("executeQuartermaster setup accepts arguments", async () => {
 	try {
 		const result = await withCwd(local, async () => {
 			const parsed = parseQuartermasterArgs(`setup ${shared} custom_sets.json`);
-			return executeQuartermaster(parsed, { source: "cli" });
+			return executeQuartermaster(parsed, {});
 		});
 
 		assert.equal(result.ok, true);
@@ -208,7 +208,7 @@ test("executeQuartermaster setup errors without UI or args", async () => {
 	try {
 		const result = await withCwd(local, async () => {
 			const parsed = parseQuartermasterArgs("setup");
-			return executeQuartermaster(parsed, { source: "cli" });
+			return executeQuartermaster(parsed, {});
 		});
 
 		assert.equal(result.ok, false);
@@ -227,7 +227,7 @@ test("executeQuartermaster install links a single item", async () => {
 
 		const result = await withCwd(local, async () => {
 			const parsed = parseQuartermasterArgs("install skills skills/writing-helper");
-			return executeQuartermaster(parsed, { source: "cli" });
+			return executeQuartermaster(parsed, {});
 		});
 
 		assert.equal(result.ok, true);
@@ -295,7 +295,7 @@ test("executeQuartermaster install set links all items", async () => {
 
 		const result = await withCwd(local, async () => {
 			const parsed = parseQuartermasterArgs("install set writer");
-			return executeQuartermaster(parsed, { source: "cli" });
+			return executeQuartermaster(parsed, {});
 		});
 
 		assert.equal(result.ok, true);
@@ -327,7 +327,7 @@ test("executeQuartermaster remove removes symlinked items", async () => {
 
 		const result = await withCwd(local, async () => {
 			const parsed = parseQuartermasterArgs("remove skills skills/writing-helper");
-			return executeQuartermaster(parsed, { source: "cli" });
+			return executeQuartermaster(parsed, {});
 		});
 
 		assert.equal(result.ok, true);
@@ -349,7 +349,7 @@ test("executeQuartermaster add-to-set writes shared sets file", async () => {
 
 		const result = await withCwd(local, async () => {
 			const parsed = parseQuartermasterArgs("add-to-set writer skills skills/writing-helper");
-			return executeQuartermaster(parsed, { source: "cli" });
+			return executeQuartermaster(parsed, {});
 		});
 
 		assert.equal(result.ok, true);
@@ -381,7 +381,7 @@ test("executeQuartermaster remove-from-set updates shared sets file", async () =
 
 		const result = await withCwd(local, async () => {
 			const parsed = parseQuartermasterArgs("remove-from-set writer skills skills/writing-helper");
-			return executeQuartermaster(parsed, { source: "cli" });
+			return executeQuartermaster(parsed, {});
 		});
 
 		assert.equal(result.ok, true);

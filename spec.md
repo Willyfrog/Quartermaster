@@ -1,17 +1,14 @@
 # Quartermaster Command + Extension Spec
 
 ## Overview
-Quartermaster is a Pi extension plus CLI command that manages **repo-local** skills, extensions, tools, and prompt templates by **symlinking** items from a shared local repository into the current repo’s `.pi/` folder. It supports installing items individually or as **sets** defined in the shared repo.
+Quartermaster is a Pi extension command that manages **repo-local** skills, extensions, tools, and prompt templates by **symlinking** items from a shared local repository into the current repo’s `.pi/` folder. It supports installing items individually or as **sets** defined in the shared repo.
 
-The same functionality is exposed as:
-- Slash command: `/quartermaster <subcommand> ...`
-- CLI: `pi quartermaster <subcommand> ...`
+The functionality is exposed as a slash command: `/quartermaster <subcommand> ...`.
 
 ## Goals
 - Make Pi per-repo configuration easy and reproducible.
 - Keep shared assets in a central local repo and link them into projects.
 - Support grouping items into named sets to install together.
-- Provide consistent behavior in both slash and CLI modes.
 
 ## Non-Goals (for initial version)
 - Remote registries or Git URLs for shared repo (local path only).
@@ -37,7 +34,7 @@ Stored in `.pi/quartermaster.json` in the current repo.
 - `repoPath` is required.
 - `setsFile` defaults to `quartermaster_sets.json` if omitted.
 
-When missing, Quartermaster prompts for `repoPath` (interactive UI). In non-interactive CLI mode, it should error with a hint to run `setup` or pass `--repo`.
+When missing, Quartermaster prompts for `repoPath` (interactive UI). In non-interactive mode, it should error with a hint to run `setup`.
 
 ## Shared Repo Layout
 The shared repo contains items and a single sets file.
@@ -97,7 +94,7 @@ Rules:
 - If the target already links to the same source, treat as no-op.
 
 ## Commands
-All commands are available via `/quartermaster` and `pi quartermaster` with identical behavior.
+All commands are available via `/quartermaster`.
 
 ### `setup`
 - Prompts for shared repo path (and optional `setsFile`).
@@ -159,7 +156,7 @@ Form:
 
 ## Behavior Notes
 - If `repoPath` is not configured, Quartermaster prompts once and stores config.
-- If `ctx.hasUI` is false (CLI non-interactive), require `--repo` or show a helpful error.
+- If `ctx.hasUI` is false, show a helpful error.
 - Prompts are standard Pi prompt templates (Markdown with optional frontmatter).
 - Tools are treated as extension modules focused on `registerTool` usage.
 
@@ -174,12 +171,6 @@ Form:
 /quartermaster installed
 ```
 
-CLI equivalents:
-```
-pi quartermaster setup
-pi quartermaster list
-pi quartermaster install set writer
-```
 
 ## Open Questions (Optional for v1)
 - Should `install` support a dry-run mode?

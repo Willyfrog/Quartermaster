@@ -1,6 +1,6 @@
 # Quartermaster
 
-Quartermaster is a Pi extension + CLI command that manages repo-local skills, extensions, tools, and prompt templates by symlinking them from a shared local repository into the current repo’s `.pi/` folder.
+Quartermaster is a Pi extension command that manages repo-local skills, extensions, tools, and prompt templates by symlinking them from a shared local repository into the current repo’s `.pi/` folder.
 
 ## Requirements
 
@@ -99,16 +99,6 @@ Example `quartermaster_sets.json`:
     }
   }
 }
-```
-
-## Usage (CLI)
-
-Once installed, the command is available via Pi’s CLI as well:
-
-```bash
-pi quartermaster setup /absolute/path/to/shared-repo quartermaster_sets.json
-pi quartermaster list
-pi quartermaster install set writer
 ```
 
 ## Usage Examples

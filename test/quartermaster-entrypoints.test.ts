@@ -4,7 +4,6 @@ import {
 	QUARTERMASTER_COMMAND,
 	parseQuartermasterArgs,
 	registerQuartermasterCommand,
-	runQuartermasterCli,
 } from "../src/quartermaster/entrypoints";
 
 test("parseQuartermasterArgs splits args and subcommand", () => {
@@ -55,17 +54,3 @@ test("registerQuartermasterCommand wires command handler", async () => {
 	await calls[0].options.handler("list skills", { hasUI: false });
 });
 
-test("runQuartermasterCli passes parsed args to execute", async () => {
-	const received = [];
-	const execute = async (parsed, context) => {
-		received.push({ parsed, context });
-		return { ok: true };
-	};
-
-	await runQuartermasterCli(["list", "skills"], execute);
-
-	assert.equal(received.length, 1);
-	assert.equal(received[0].parsed.subcommand, "list");
-	assert.deepEqual(received[0].parsed.args, ["skills"]);
-	assert.equal(received[0].context.source, "cli");
-});
