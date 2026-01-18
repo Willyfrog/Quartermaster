@@ -25,6 +25,22 @@ async function withCwd<T>(cwd: string, run: () => Promise<T>): Promise<T> {
 	}
 }
 
+async function withTempAgentDir(run: (dir: string) => Promise<void>): Promise<void> {
+	const dir = await fs.mkdtemp(path.join(os.tmpdir(), "quartermaster-agent-"));
+	const previous = process.env.PI_CODING_AGENT_DIR;
+	process.env.PI_CODING_AGENT_DIR = dir;
+	try {
+		await run(dir);
+	} finally {
+		if (previous === undefined) {
+			delete process.env.PI_CODING_AGENT_DIR;
+		} else {
+			process.env.PI_CODING_AGENT_DIR = previous;
+		}
+		await fs.rm(dir, { recursive: true, force: true });
+	}
+}
+
 async function createSharedRepo(): Promise<string> {
 	const shared = await createTempDir("quartermaster-shared-");
 	await fs.mkdir(path.join(shared, "skills", "writing-helper"), { recursive: true });
@@ -200,6 +216,27 @@ test("executeQuartermaster setup accepts arguments", async () => {
 		await removeTempDir(shared);
 		await removeTempDir(local);
 	}
+});
+
+test("executeQuartermaster setup writes global config", async () => {
+	await withTempAgentDir(async () => {
+		const shared = await createSharedRepo();
+		const local = await createTempDir("quartermaster-local-");
+
+		try {
+			const result = await withCwd(local, async () => {
+				const parsed = parseQuartermasterArgs(`setup --global ${shared}`);
+				return executeQuartermaster(parsed, {});
+			});
+
+			assert.equal(result.ok, true);
+			const config = await readQuartermasterConfig(local, "global");
+			assert.equal(config?.repoPath, shared);
+		} finally {
+			await removeTempDir(shared);
+			await removeTempDir(local);
+		}
+	});
 });
 
 test("executeQuartermaster setup errors without UI or args", async () => {

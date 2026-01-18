@@ -2,72 +2,46 @@
 
 Quartermaster is a Pi extension command that manages repo-local skills, extensions, tools, and prompt templates by symlinking them from a shared local repository into the current repo’s `.pi/` folder.
 
+It helps you:
+- List available shared items by type
+- Install/remove items via symlinks
+- Install groups of items via sets
+
 ## Requirements
 
 - [Pi coding agent](https://www.npmjs.com/package/@mariozechner/pi-coding-agent)
 
 ## Install
 
-Quartermaster is loaded as a Pi extension. Since this repo is not packaged, point Pi at the extension entrypoint in `src/quartermaster/extension.ts`.
+Quartermaster is loaded as a Pi extension. The recommended setup is to install the **bundle globally** so it’s available in every Pi session.
 
-### Project-local install (recommended)
+### Global bundle install (recommended)
 
-From your project repo:
+Download the release bundle into your global Pi extensions folder:
 
 ```bash
-mkdir -p .pi/extensions
-ln -s /absolute/path/to/quartermaster/src/quartermaster/extension.ts .pi/extensions/quartermaster.ts
+mkdir -p ~/.pi/agent/extensions
+curl -L -o ~/.pi/agent/extensions/quartermaster.bundle.js \
+  https://github.com/<org>/<repo>/releases/download/vX.Y.Z/quartermaster.bundle.js
 ```
+
+Pi auto-discovers `.js` files in `~/.pi/agent/extensions`, so no extra configuration is needed.
 
 Start Pi and run (interactive prompt):
 
 ```text
-/quartermaster setup
+/quartermaster setup --global
 ```
 
 Or pass the repo path (and optional sets file):
 
 ```text
-/quartermaster setup /absolute/path/to/shared-repo quartermaster_sets.json
+/quartermaster setup --global /absolute/path/to/shared-repo quartermaster_sets.json
 ```
 
-### Global install
+This stores the configuration in `~/.pi/agent/quartermaster.json` so it applies to every repo.
 
-Add the extension path to your global Pi settings:
-
-```json
-// ~/.pi/agent/settings.json
-{
-  "extensions": ["/absolute/path/to/quartermaster/src/quartermaster/extension.ts"]
-}
-```
-
-Or pass it on the command line:
-
-```bash
-pi --extension /absolute/path/to/quartermaster/src/quartermaster/extension.ts
-```
-
-### Install from GitHub release (bundle)
-
-If you download a release asset (the single-file bundle), drop it into your project’s `.pi/extensions/` folder:
-
-```bash
-mkdir -p .pi/extensions
-curl -L -o .pi/extensions/quartermaster.bundle.js \
-  https://github.com/<org>/<repo>/releases/download/vX.Y.Z/quartermaster.bundle.js
-```
-
-Pi auto-discovers `.js` files in `.pi/extensions`, so no extra configuration is needed.
-
-### Build bundle (maintainers)
-
-```bash
-npm install
-npm run build
-```
-
-Outputs `dist/quartermaster.bundle.js` for release uploads.
+If you need per-repo settings, use `--local` to write `.pi/quartermaster.json` instead.
 
 ## Shared Repo Layout
 
@@ -104,7 +78,7 @@ Example `quartermaster_sets.json`:
 ## Usage Examples
 
 ```text
-/quartermaster setup
+/quartermaster setup --global
 /quartermaster list
 /quartermaster sets
 /quartermaster install             # prompts for type/path
@@ -116,6 +90,7 @@ Example `quartermaster_sets.json`:
 
 ## Quick Start
 
-1. Install the extension (project-local or global).
-2. Run `/quartermaster setup` and enter your shared repo path when prompted (or provide it as an argument).
-3. Use `/quartermaster list`, `/quartermaster install`, etc. to manage items.
+1. Create a shared repo that follows the layout below.
+2. Install the global bundle in `~/.pi/agent/extensions`.
+3. Run `/quartermaster setup --global` and enter your shared repo path (or pass it as an argument).
+4. Use `/quartermaster list`, `/quartermaster install`, etc. to manage items.

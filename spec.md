@@ -21,8 +21,12 @@ The functionality is exposed as a slash command: `/quartermaster <subcommand> ..
 - **Item**: One skill, extension, tool, or prompt template.
 - **Set**: A named list of items to install together.
 
-## Local Configuration
-Stored in `.pi/quartermaster.json` in the current repo.
+## Configuration
+Quartermaster reads configuration from either:
+- **Global:** `~/.pi/agent/quartermaster.json`
+- **Local:** `.pi/quartermaster.json` in the current repo
+
+If both exist, local takes precedence. If neither exists, Quartermaster prompts for `repoPath` (interactive UI). In non-interactive mode, it should error with a hint to run `setup`.
 
 ```json
 {
@@ -33,8 +37,6 @@ Stored in `.pi/quartermaster.json` in the current repo.
 
 - `repoPath` is required.
 - `setsFile` defaults to `quartermaster_sets.json` if omitted.
-
-When missing, Quartermaster prompts for `repoPath` (interactive UI). In non-interactive mode, it should error with a hint to run `setup`.
 
 ## Shared Repo Layout
 The shared repo contains items and a single sets file.
@@ -98,7 +100,9 @@ All commands are available via `/quartermaster`.
 
 ### `setup`
 - Prompts for shared repo path (and optional `setsFile`).
-- Writes `.pi/quartermaster.json`.
+- Writes `.pi/quartermaster.json` by default.
+- Use `--global` to write `~/.pi/agent/quartermaster.json`.
+- Use `--local` to force repo-local config.
 - Validates that `repoPath` exists and that `quartermaster_sets.json` is present (warning if missing).
 
 ### `list` (available items)
@@ -157,6 +161,7 @@ Form:
 ## Behavior Notes
 - If `repoPath` is not configured, Quartermaster prompts once and stores config.
 - If `ctx.hasUI` is false, show a helpful error.
+- Global config is preferred only when no local config exists.
 - Prompts are standard Pi prompt templates (Markdown with optional frontmatter).
 - Tools are treated as extension modules focused on `registerTool` usage.
 

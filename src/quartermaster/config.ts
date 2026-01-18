@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 
 const DEFAULT_SETS_FILE = "quartermaster_sets.json";
@@ -24,9 +25,12 @@ type QuartermasterConfigResolveOptions = {
 	cwd?: string;
 	repoOverride?: string;
 	setsFileOverride?: string;
+	scope?: QuartermasterConfigScope;
 	ctx?: QuartermasterConfigContext;
 	prompt?: QuartermasterConfigPrompt;
 };
+
+type QuartermasterConfigScope = "local" | "global" | "auto";
 
 function normalizeConfig(config: QuartermasterConfigInput): QuartermasterConfig {
 	const repoPath = config.repoPath.trim();
@@ -59,10 +63,12 @@ export function getQuartermasterConfigPath(cwd: string = process.cwd()): string 
 	return path.join(cwd, ".pi", CONFIG_FILENAME);
 }
 
-export async function readQuartermasterConfig(
-	cwd: string = process.cwd()
-): Promise<QuartermasterConfig | null> {
-	const configPath = getQuartermasterConfigPath(cwd);
+export function getQuartermasterGlobalConfigPath(): string {
+	const baseDir = process.env.PI_CODING_AGENT_DIR ?? path.join(os.homedir(), ".pi", "agent");
+	return path.join(baseDir, CONFIG_FILENAME);
+}
+
+async function readConfigAtPath(configPath: string): Promise<QuartermasterConfig | null> {
 	try {
 		const raw = await fs.readFile(configPath, "utf8");
 		const parsed = JSON.parse(raw) as QuartermasterConfigInput;
@@ -76,13 +82,30 @@ export async function readQuartermasterConfig(
 	}
 }
 
+export async function readQuartermasterConfig(
+	cwd: string = process.cwd(),
+	scope: QuartermasterConfigScope = "local"
+): Promise<QuartermasterConfig | null> {
+	if (scope === "global") {
+		return readConfigAtPath(getQuartermasterGlobalConfigPath());
+	}
+
+	const local = await readConfigAtPath(getQuartermasterConfigPath(cwd));
+	if (scope === "auto" && !local) {
+		return readConfigAtPath(getQuartermasterGlobalConfigPath());
+	}
+	return local;
+}
+
 export async function writeQuartermasterConfig(
 	config: QuartermasterConfigInput,
-	cwd: string = process.cwd()
+	cwd: string = process.cwd(),
+	scope: QuartermasterConfigScope = "local"
 ): Promise<QuartermasterConfig> {
 	const normalized = normalizeConfig(config);
 	await validateRepoPath(normalized.repoPath);
-	const configPath = getQuartermasterConfigPath(cwd);
+	const configPath =
+		scope === "global" ? getQuartermasterGlobalConfigPath() : getQuartermasterConfigPath(cwd);
 	await fs.mkdir(path.dirname(configPath), { recursive: true });
 	await fs.writeFile(configPath, `${JSON.stringify(normalized, null, 2)}\n`, "utf8");
 	return normalized;
@@ -92,11 +115,13 @@ export async function resolveQuartermasterConfig(
 	options: QuartermasterConfigResolveOptions = {}
 ): Promise<QuartermasterConfig> {
 	const cwd = options.cwd ?? process.cwd();
-	const existing = await readQuartermasterConfig(cwd);
+	const scope = options.scope ?? "auto";
+	const existing = await readQuartermasterConfig(cwd, scope);
 	const setsFile = options.setsFileOverride ?? existing?.setsFile ?? DEFAULT_SETS_FILE;
+	const writeScope = scope === "global" ? "global" : "local";
 
 	if (options.repoOverride) {
-		return writeQuartermasterConfig({ repoPath: options.repoOverride, setsFile }, cwd);
+		return writeQuartermasterConfig({ repoPath: options.repoOverride, setsFile }, cwd, writeScope);
 	}
 
 	if (existing) {
@@ -110,11 +135,16 @@ export async function resolveQuartermasterConfig(
 		}
 		const response = await options.prompt("Path to shared Quartermaster repo:");
 		const repoPath = String(response ?? "").trim();
-		return writeQuartermasterConfig({ repoPath, setsFile }, cwd);
+		return writeQuartermasterConfig({ repoPath, setsFile }, cwd, writeScope);
 	}
 
-	throw new Error("Quartermaster repo path not configured. Run `quartermaster setup` or pass --repo.");
+	throw new Error("Quartermaster repo path not configured. Run `/quartermaster setup`.");
 }
 
 export { DEFAULT_SETS_FILE };
-export type { QuartermasterConfig, QuartermasterConfigInput, QuartermasterConfigResolveOptions };
+export type {
+	QuartermasterConfig,
+	QuartermasterConfigInput,
+	QuartermasterConfigResolveOptions,
+	QuartermasterConfigScope,
+};

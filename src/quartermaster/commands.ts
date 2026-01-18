@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { resolveQuartermasterConfig } from "./config";
+import type { QuartermasterConfigScope } from "./config";
 import { discoverQuartermasterItems, readQuartermasterSets } from "./discovery";
 import type {
 	QuartermasterCommandContext,
@@ -561,11 +562,27 @@ async function handleSets(parsed: QuartermasterParsedArgs, ctx?: QuartermasterCo
 }
 
 async function handleSetup(parsed: QuartermasterParsedArgs, ctx?: QuartermasterCommandContext): Promise<QuartermasterCommandOutcome> {
-	if (parsed.args.length > 2) {
+	const args = [...parsed.args];
+	let scope: QuartermasterConfigScope = "local";
+
+	while (args.length > 0 && args[0].startsWith("--")) {
+		const flag = args.shift();
+		if (flag === "--global") {
+			scope = "global";
+			continue;
+		}
+		if (flag === "--local") {
+			scope = "local";
+			continue;
+		}
+		return { ok: false, message: `Unknown option: ${flag}` };
+	}
+
+	if (args.length > 2) {
 		return { ok: false, message: "Too many arguments provided." };
 	}
 
-	const [repoArg, setsFileArg] = parsed.args;
+	const [repoArg, setsFileArg] = args;
 	let repoPath = repoArg?.trim();
 	let setsFile = setsFileArg?.trim() || undefined;
 
@@ -598,6 +615,7 @@ async function handleSetup(parsed: QuartermasterParsedArgs, ctx?: QuartermasterC
 	const config = await resolveQuartermasterConfig({
 		ctx,
 		prompt,
+		scope,
 		repoOverride: repoPath,
 		setsFileOverride: setsFile,
 	});

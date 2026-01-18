@@ -6,6 +6,7 @@ import test from "node:test";
 import {
 	DEFAULT_SETS_FILE,
 	getQuartermasterConfigPath,
+	getQuartermasterGlobalConfigPath,
 	readQuartermasterConfig,
 	resolveQuartermasterConfig,
 	writeQuartermasterConfig,
@@ -16,6 +17,22 @@ async function withTempDir(run: (dir: string) => Promise<void>): Promise<void> {
 	try {
 		await run(dir);
 	} finally {
+		await fs.rm(dir, { recursive: true, force: true });
+	}
+}
+
+async function withTempAgentDir(run: (dir: string) => Promise<void>): Promise<void> {
+	const dir = await fs.mkdtemp(path.join(os.tmpdir(), "quartermaster-agent-"));
+	const previous = process.env.PI_CODING_AGENT_DIR;
+	process.env.PI_CODING_AGENT_DIR = dir;
+	try {
+		await run(dir);
+	} finally {
+		if (previous === undefined) {
+			delete process.env.PI_CODING_AGENT_DIR;
+		} else {
+			process.env.PI_CODING_AGENT_DIR = previous;
+		}
 		await fs.rm(dir, { recursive: true, force: true });
 	}
 }
@@ -41,6 +58,20 @@ test("writeQuartermasterConfig persists normalized config", async () => {
 	});
 });
 
+test("writeQuartermasterConfig persists global config", async () => {
+	await withTempAgentDir(async (agentDir) => {
+		await withTempDir(async (dir) => {
+			const sharedRepo = await fs.mkdtemp(path.join(dir, "shared-"));
+			const written = await writeQuartermasterConfig({ repoPath: sharedRepo }, dir, "global");
+			assert.equal(written.repoPath, sharedRepo);
+			const configPath = getQuartermasterGlobalConfigPath();
+			const stored = JSON.parse(await fs.readFile(configPath, "utf8"));
+			assert.equal(stored.repoPath, sharedRepo);
+			assert.equal(stored.setsFile, DEFAULT_SETS_FILE);
+		});
+	});
+});
+
 test("writeQuartermasterConfig rejects non-directory repo path", async () => {
 	await withTempDir(async (dir) => {
 		const filePath = path.join(dir, "repo.txt");
@@ -58,6 +89,19 @@ test("resolveQuartermasterConfig writes override with default sets file", async 
 
 		const stored = await readQuartermasterConfig(dir);
 		assert.equal(stored?.repoPath, sharedRepo);
+	});
+});
+
+test("resolveQuartermasterConfig falls back to global config", async () => {
+	await withTempAgentDir(async () => {
+		await withTempDir(async (dir) => {
+			const sharedRepo = await fs.mkdtemp(path.join(dir, "shared-"));
+			await writeQuartermasterConfig({ repoPath: sharedRepo }, dir, "global");
+
+			const resolved = await resolveQuartermasterConfig({ cwd: dir });
+			assert.equal(resolved.repoPath, sharedRepo);
+			assert.equal(resolved.setsFile, DEFAULT_SETS_FILE);
+		});
 	});
 });
 
@@ -100,7 +144,7 @@ test("resolveQuartermasterConfig errors without config in non-interactive mode",
 	await withTempDir(async (dir) => {
 		await assert.rejects(
 			() => resolveQuartermasterConfig({ cwd: dir, ctx: { hasUI: false } }),
-			/Run `quartermaster setup` or pass --repo/u
+			/Run `\/quartermaster setup`/u
 		);
 	});
 });
