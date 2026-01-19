@@ -92,7 +92,9 @@ test("readQuartermasterSets parses sets file and normalizes items", async () => 
 		);
 
 		const sets = await readQuartermasterSets(dir, "quartermaster_sets.json");
-		assert.ok(sets);
+		if (!sets) {
+			throw new Error("Expected sets to be defined");
+		}
 		assert.equal(sets.version, 1);
 		assert.equal(sets.sets.length, 1);
 		assert.equal(sets.sets[0].name, "writer");

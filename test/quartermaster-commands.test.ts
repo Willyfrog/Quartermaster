@@ -173,7 +173,6 @@ test("executeQuartermaster setup prompts for repo path", async () => {
 		const result = await withCwd(local, async () => {
 			const parsed = parseQuartermasterArgs("setup");
 			return executeQuartermaster(parsed, {
-				source: "command",
 				ctx: {
 					hasUI: true,
 					ui: {
@@ -294,7 +293,6 @@ test("executeQuartermaster install prompts for args", async () => {
 		const result = await withCwd(local, async () => {
 			const parsed = parseQuartermasterArgs("install");
 			return executeQuartermaster(parsed, {
-				source: "command",
 				ctx: {
 					hasUI: true,
 					ui: {

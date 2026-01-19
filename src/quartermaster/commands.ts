@@ -495,7 +495,9 @@ function parseSetItemArgs(
 	return { name: name.trim(), type: candidate as QuartermasterItemType, path: itemPath };
 }
 
-function getPrompt(ctx?: QuartermasterCommandContext): ((message: string) => Promise<string> | string) | undefined {
+function getPrompt(
+	ctx?: QuartermasterCommandContext
+): ((message: string) => Promise<string | undefined> | string | undefined) | undefined {
 	if (!ctx) {
 		return undefined;
 	}
@@ -511,7 +513,7 @@ function getPrompt(ctx?: QuartermasterCommandContext): ((message: string) => Pro
 function getUsageMessage(): string {
 	return [
 		"Quartermaster commands:",
-		"  setup [repoPath] [setsFile]",
+		"  setup [--global|--local] [repoPath] [setsFile]",
 		"  list [type]",
 		"  installed [type]",
 		"  sets",
@@ -630,7 +632,7 @@ async function handleSetup(parsed: QuartermasterParsedArgs, ctx?: QuartermasterC
 
 async function promptInstallArgs(
 	ctx: QuartermasterCommandContext | undefined,
-	prompt: ((message: string) => Promise<string> | string) | undefined
+	prompt: ((message: string) => Promise<string | undefined> | string | undefined) | undefined
 ): Promise<{ args?: string[]; error?: string }> {
 	if (!ctx?.hasUI) {
 		return { error: "Expected install <type> <path> or install set <name>." };
