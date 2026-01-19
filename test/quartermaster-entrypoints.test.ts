@@ -38,13 +38,28 @@ void test("parseQuartermasterArgs tolerates non-string input", () => {
 	assert.deepEqual(parsed.raw, []);
 });
 
+type TestQuartermasterUI = {
+	notify: (message: string, level: "info" | "error") => void;
+};
+
+type TestQuartermasterContext = {
+	hasUI?: boolean;
+	ui?: TestQuartermasterUI;
+};
+
+type TestQuartermasterHandler = (args: string | undefined, ctx: TestQuartermasterContext) => Promise<void> | void;
+
+type TestRegisterCommandOptions = {
+	handler: TestQuartermasterHandler;
+};
+
 void test("registerQuartermasterCommand wires command handler", async () => {
 	const calls: Array<{
 		name: string;
-		options: { handler: (args: string | undefined, ctx: { hasUI?: boolean }) => Promise<void> | void };
+		options: TestRegisterCommandOptions;
 	}> = [];
 	const pi = {
-		registerCommand: (name: string, options: { handler: (args: string | undefined, ctx: { hasUI?: boolean }) => Promise<void> | void }) => {
+		registerCommand: (name: string, options: TestRegisterCommandOptions) => {
 			calls.push({ name, options });
 		},
 	};
@@ -64,17 +79,9 @@ void test("default quartermaster command reports missing install", async () => {
 	const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "quartermaster-test-"));
 	process.env.PI_CODING_AGENT_DIR = tempDir;
 
-	let handler:
-		| ((args: string | undefined, ctx: { hasUI?: boolean; ui?: { notify: (message: string, level: "info" | "error") => void } }) => Promise<void> | void)
-		| undefined;
+	let handler: TestQuartermasterHandler | undefined;
 	const pi = {
-		registerCommand: (
-			_name: string,
-			options: {
-				handler: (args: string | undefined, ctx: { hasUI?: boolean; ui?: { notify: (message: string, level: "info" | "error") => void } }) =>
-					Promise<void> | void;
-			}
-		) => {
+		registerCommand: (_name: string, options: TestRegisterCommandOptions) => {
 			handler = options.handler;
 		},
 	};
@@ -98,6 +105,7 @@ void test("default quartermaster command reports missing install", async () => {
 		} else {
 			process.env.PI_CODING_AGENT_DIR = originalAgentDir;
 		}
+		await fs.rm(tempDir, { recursive: true, force: true });
 	}
 
 	assert.ok(
