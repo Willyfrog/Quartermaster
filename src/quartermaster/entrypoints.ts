@@ -79,6 +79,11 @@ type QuartermasterInstallInfo = {
 	active?: "local" | "global";
 };
 
+type QuartermasterInstallOutcome = {
+	ok: boolean;
+	message: string;
+};
+
 function getGlobalExtensionsDir(): string {
 	const baseDir = process.env.PI_CODING_AGENT_DIR ?? path.join(os.homedir(), ".pi", "agent");
 	return path.join(baseDir, "extensions");
@@ -120,7 +125,7 @@ function detectInstallInfo(cwd: string = process.cwd()): QuartermasterInstallInf
 function formatInstallMessage(
 	info: QuartermasterInstallInfo,
 	cwd: string = process.cwd()
-): { ok: boolean; message: string } {
+): QuartermasterInstallOutcome {
 	const resolvedCwd = path.resolve(cwd);
 	const resolvedLocalPath = path.resolve(info.localPath);
 	const localDisplay = resolvedLocalPath.startsWith(`${resolvedCwd}${path.sep}`)
@@ -169,12 +174,16 @@ function formatInstallMessage(
 	return { ok: true, message: `Quartermaster is installed globally (${globalDisplay}).` };
 }
 
+export function getQuartermasterInstallOutcome(cwd: string = process.cwd()): QuartermasterInstallOutcome {
+	const info = detectInstallInfo(cwd);
+	return formatInstallMessage(info, cwd);
+}
+
 function defaultExecute(
 	parsed: QuartermasterParsedArgs,
 	_context: QuartermasterExecuteContext
 ): QuartermasterExecuteResult {
-	const info = detectInstallInfo();
-	const outcome = formatInstallMessage(info);
+	const outcome = getQuartermasterInstallOutcome();
 	return {
 		ok: outcome.ok,
 		message: outcome.message,
@@ -213,4 +222,5 @@ export type {
 	QuartermasterExecuteResult,
 	QuartermasterParsedArgs,
 	QuartermasterExtensionApi,
+	QuartermasterInstallOutcome,
 };
