@@ -5,11 +5,18 @@
   "scripts": {
     "test": "node --test --import tsx",
     "build": "esbuild src/quartermaster/extension.ts --bundle --platform=node --format=cjs --target=node18 --outfile=dist/quartermaster.bundle.js --footer:js=\"module.exports = module.exports.default;\"",
-    "check": "tsc"
+    "check": "tsc",
+    "lint": "eslint \"{src,test}/**/*.ts\""
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.3",
+    "@eslint/js": "^9.39.2",
     "@types/node": "^22.13.0",
+    "@typescript-eslint/eslint-plugin": "^8.53.0",
+    "@typescript-eslint/parser": "^8.53.0",
     "esbuild": "^0.25.0",
+    "eslint": "^9.39.2",
+    "globals": "^17.0.0",
     "tsx": "^4.20.0",
     "typescript": "^5.8.2"
   }
