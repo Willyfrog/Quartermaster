@@ -4,6 +4,7 @@ import path from "node:path";
 import { resolveQuartermasterConfig } from "./config";
 import type { QuartermasterConfigScope } from "./config";
 import { discoverQuartermasterItems, readQuartermasterSets } from "./discovery";
+import { getQuartermasterInstallOutcome } from "./entrypoints";
 import type {
 	QuartermasterCommandContext,
 	QuartermasterExecute,
@@ -891,6 +892,10 @@ export const executeQuartermaster: QuartermasterExecute = async (
 ): Promise<QuartermasterExecuteResult> => {
 	try {
 		switch (parsed.subcommand) {
+			case "": {
+				const outcome = getQuartermasterInstallOutcome();
+				return { ok: outcome.ok, message: outcome.message, parsed };
+			}
 			case "list":
 				return await handleList(parsed, context.ctx);
 			case "installed":

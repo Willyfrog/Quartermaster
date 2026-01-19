@@ -126,31 +126,35 @@ void test("resolveQuartermasterConfig errors when repo path missing", async () =
 });
 
 void test("resolveQuartermasterConfig prompts when config missing and UI available", async () => {
-	await withTempDir(async (dir) => {
-		const sharedRepo = await fs.mkdtemp(path.join(dir, "shared-"));
-		const prompts: string[] = [];
-		const resolved = await resolveQuartermasterConfig({
-			cwd: dir,
-			ctx: { hasUI: true },
-			prompt: (message) => {
-				prompts.push(message);
-				return sharedRepo;
-			},
-		});
-		assert.equal(prompts.length, 1);
-		assert.equal(resolved.repoPath, sharedRepo);
-		assert.equal(resolved.setsFile, DEFAULT_SETS_FILE);
+	await withTempAgentDir(async () => {
+		await withTempDir(async (dir) => {
+			const sharedRepo = await fs.mkdtemp(path.join(dir, "shared-"));
+			const prompts: string[] = [];
+			const resolved = await resolveQuartermasterConfig({
+				cwd: dir,
+				ctx: { hasUI: true },
+				prompt: (message) => {
+					prompts.push(message);
+					return sharedRepo;
+				},
+			});
+			assert.equal(prompts.length, 1);
+			assert.equal(resolved.repoPath, sharedRepo);
+			assert.equal(resolved.setsFile, DEFAULT_SETS_FILE);
 
-		const stored = await readQuartermasterConfig(dir);
-		assert.equal(stored?.repoPath, sharedRepo);
+			const stored = await readQuartermasterConfig(dir);
+			assert.equal(stored?.repoPath, sharedRepo);
+		});
 	});
 });
 
 void test("resolveQuartermasterConfig errors without config in non-interactive mode", async () => {
-	await withTempDir(async (dir) => {
-		await assert.rejects(
-			() => resolveQuartermasterConfig({ cwd: dir, ctx: { hasUI: false } }),
-			/Run `\/quartermaster setup`/u
-		);
+	await withTempAgentDir(async () => {
+		await withTempDir(async (dir) => {
+			await assert.rejects(
+				() => resolveQuartermasterConfig({ cwd: dir, ctx: { hasUI: false } }),
+				/Run `\/quartermaster setup`/u
+			);
+		});
 	});
 });

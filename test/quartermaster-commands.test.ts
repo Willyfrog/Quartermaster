@@ -254,6 +254,25 @@ void test("executeQuartermaster setup errors without UI or args", async () => {
 	}
 });
 
+void test("executeQuartermaster with no args reports install status", async () => {
+	await withTempAgentDir(async () => {
+		const local = await createTempDir("quartermaster-local-");
+
+		try {
+			const result = await withCwd(local, async () => {
+				const parsed = parseQuartermasterArgs("");
+				return executeQuartermaster(parsed, {});
+			});
+
+			assert.equal(result.ok, false);
+			assert.match(result.message ?? "", /Unexpected: Quartermaster is running/u);
+			assert.ok(!/Quartermaster commands:/u.test(result.message ?? ""));
+		} finally {
+			await removeTempDir(local);
+		}
+	});
+});
+
 void test("executeQuartermaster install links a single item", async () => {
 	const shared = await createSharedRepo();
 	const local = await createTempDir("quartermaster-local-");
