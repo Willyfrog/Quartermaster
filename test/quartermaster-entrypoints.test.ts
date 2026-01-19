@@ -5,6 +5,7 @@ import {
 	parseQuartermasterArgs,
 	registerQuartermasterCommand,
 } from "../src/quartermaster/entrypoints";
+import type { QuartermasterExecute } from "../src/quartermaster/entrypoints";
 
 test("parseQuartermasterArgs splits args and subcommand", () => {
 	const parsed = parseQuartermasterArgs("install set writer");
@@ -35,14 +36,17 @@ test("parseQuartermasterArgs tolerates non-string input", () => {
 });
 
 test("registerQuartermasterCommand wires command handler", async () => {
-	const calls = [];
+	const calls: Array<{
+		name: string;
+		options: { handler: (args: string | undefined, ctx: { hasUI?: boolean }) => Promise<void> | void };
+	}> = [];
 	const pi = {
-		registerCommand: (name, options) => {
+		registerCommand: (name: string, options: { handler: (args: string | undefined, ctx: { hasUI?: boolean }) => Promise<void> | void }) => {
 			calls.push({ name, options });
 		},
 	};
 
-	const execute = async (parsed, context) => {
+	const execute: QuartermasterExecute = async (parsed, context) => {
 		return { ok: true, parsed, context };
 	};
 

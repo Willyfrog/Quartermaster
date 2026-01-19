@@ -26,15 +26,14 @@ type QuartermasterSets = {
 	sets: QuartermasterSetDefinition[];
 };
 
+type QuartermasterSetInput = {
+	description?: string;
+	items?: Partial<Record<QuartermasterItemType, string[]>>;
+};
+
 type QuartermasterSetsInput = {
 	version?: number;
-	sets?: Record<
-		string,
-		{
-			description?: string;
-			items?: Partial<Record<QuartermasterItemType, string[]>>;
-		}
-	>;
+	sets?: Record<string, QuartermasterSetInput>;
 };
 
 async function fileExists(targetPath: string): Promise<boolean> {
@@ -151,7 +150,7 @@ function normalizeSetItems(items?: Partial<Record<QuartermasterItemType, string[
 	}, {} as QuartermasterSetItems);
 }
 
-function normalizeSetDefinition(name: string, entry: QuartermasterSetsInput["sets"][string]): QuartermasterSetDefinition {
+function normalizeSetDefinition(name: string, entry: QuartermasterSetInput | undefined): QuartermasterSetDefinition {
 	return {
 		name,
 		description: entry?.description?.trim() || undefined,

@@ -10,7 +10,7 @@ type QuartermasterParsedArgs = {
 
 type QuartermasterCommandContext = {
 	hasUI?: boolean;
-	prompt?: (message: string) => Promise<string> | string;
+	prompt?: (message: string) => Promise<string | undefined> | string | undefined;
 	ui?: {
 		notify: (message: string, level: "info" | "error") => void;
 		input?: (message: string) => Promise<string | undefined> | string | undefined;

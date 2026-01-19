@@ -15,7 +15,7 @@ type QuartermasterConfigInput = {
 	setsFile?: string;
 };
 
-type QuartermasterConfigPrompt = (message: string) => Promise<string> | string;
+type QuartermasterConfigPrompt = (message: string) => Promise<string | undefined> | string | undefined;
 
 type QuartermasterConfigContext = {
 	hasUI?: boolean;
