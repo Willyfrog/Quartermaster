@@ -37,14 +37,14 @@ async function withTempAgentDir(run: (dir: string) => Promise<void>): Promise<vo
 	}
 }
 
-test("readQuartermasterConfig returns null when config missing", async () => {
+void test("readQuartermasterConfig returns null when config missing", async () => {
 	await withTempDir(async (dir) => {
 		const result = await readQuartermasterConfig(dir);
 		assert.equal(result, null);
 	});
 });
 
-test("writeQuartermasterConfig persists normalized config", async () => {
+void test("writeQuartermasterConfig persists normalized config", async () => {
 	await withTempDir(async (dir) => {
 		const sharedRepo = await fs.mkdtemp(path.join(dir, "shared-"));
 		const written = await writeQuartermasterConfig({ repoPath: sharedRepo }, dir);
@@ -52,27 +52,33 @@ test("writeQuartermasterConfig persists normalized config", async () => {
 		assert.equal(written.setsFile, DEFAULT_SETS_FILE);
 
 		const configPath = getQuartermasterConfigPath(dir);
-		const stored = JSON.parse(await fs.readFile(configPath, "utf8"));
+		const stored = JSON.parse(await fs.readFile(configPath, "utf8")) as {
+			repoPath: string;
+			setsFile: string;
+		};
 		assert.equal(stored.repoPath, sharedRepo);
 		assert.equal(stored.setsFile, DEFAULT_SETS_FILE);
 	});
 });
 
-test("writeQuartermasterConfig persists global config", async () => {
-	await withTempAgentDir(async (agentDir) => {
+void test("writeQuartermasterConfig persists global config", async () => {
+	await withTempAgentDir(async (_agentDir) => {
 		await withTempDir(async (dir) => {
 			const sharedRepo = await fs.mkdtemp(path.join(dir, "shared-"));
 			const written = await writeQuartermasterConfig({ repoPath: sharedRepo }, dir, "global");
 			assert.equal(written.repoPath, sharedRepo);
 			const configPath = getQuartermasterGlobalConfigPath();
-			const stored = JSON.parse(await fs.readFile(configPath, "utf8"));
+			const stored = JSON.parse(await fs.readFile(configPath, "utf8")) as {
+				repoPath: string;
+				setsFile: string;
+			};
 			assert.equal(stored.repoPath, sharedRepo);
 			assert.equal(stored.setsFile, DEFAULT_SETS_FILE);
 		});
 	});
 });
 
-test("writeQuartermasterConfig rejects non-directory repo path", async () => {
+void test("writeQuartermasterConfig rejects non-directory repo path", async () => {
 	await withTempDir(async (dir) => {
 		const filePath = path.join(dir, "repo.txt");
 		await fs.writeFile(filePath, "not a dir");
@@ -80,7 +86,7 @@ test("writeQuartermasterConfig rejects non-directory repo path", async () => {
 	});
 });
 
-test("resolveQuartermasterConfig writes override with default sets file", async () => {
+void test("resolveQuartermasterConfig writes override with default sets file", async () => {
 	await withTempDir(async (dir) => {
 		const sharedRepo = await fs.mkdtemp(path.join(dir, "shared-"));
 		const resolved = await resolveQuartermasterConfig({ cwd: dir, repoOverride: sharedRepo });
@@ -92,7 +98,7 @@ test("resolveQuartermasterConfig writes override with default sets file", async 
 	});
 });
 
-test("resolveQuartermasterConfig falls back to global config", async () => {
+void test("resolveQuartermasterConfig falls back to global config", async () => {
 	await withTempAgentDir(async () => {
 		await withTempDir(async (dir) => {
 			const sharedRepo = await fs.mkdtemp(path.join(dir, "shared-"));
@@ -105,7 +111,7 @@ test("resolveQuartermasterConfig falls back to global config", async () => {
 	});
 });
 
-test("resolveQuartermasterConfig errors when repo path missing", async () => {
+void test("resolveQuartermasterConfig errors when repo path missing", async () => {
 	await withTempDir(async (dir) => {
 		const missingPath = path.join(dir, "missing-repo");
 		const configPath = getQuartermasterConfigPath(dir);
@@ -119,7 +125,7 @@ test("resolveQuartermasterConfig errors when repo path missing", async () => {
 	});
 });
 
-test("resolveQuartermasterConfig prompts when config missing and UI available", async () => {
+void test("resolveQuartermasterConfig prompts when config missing and UI available", async () => {
 	await withTempDir(async (dir) => {
 		const sharedRepo = await fs.mkdtemp(path.join(dir, "shared-"));
 		const prompts: string[] = [];
@@ -140,7 +146,7 @@ test("resolveQuartermasterConfig prompts when config missing and UI available", 
 	});
 });
 
-test("resolveQuartermasterConfig errors without config in non-interactive mode", async () => {
+void test("resolveQuartermasterConfig errors without config in non-interactive mode", async () => {
 	await withTempDir(async (dir) => {
 		await assert.rejects(
 			() => resolveQuartermasterConfig({ cwd: dir, ctx: { hasUI: false } }),

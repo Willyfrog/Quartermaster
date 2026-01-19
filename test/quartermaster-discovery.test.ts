@@ -44,7 +44,7 @@ async function setupSharedRepo(root: string): Promise<void> {
 	await writeFile(path.join(root, "prompts", "nested", "guide.md"), "Guide");
 }
 
-test("discoverQuartermasterItems finds shared repo items", async () => {
+void test("discoverQuartermasterItems finds shared repo items", async () => {
 	await withTempDir(async (dir) => {
 		await setupSharedRepo(dir);
 
@@ -69,7 +69,7 @@ test("discoverQuartermasterItems finds shared repo items", async () => {
 	});
 });
 
-test("readQuartermasterSets parses sets file and normalizes items", async () => {
+void test("readQuartermasterSets parses sets file and normalizes items", async () => {
 	await withTempDir(async (dir) => {
 		await writeFile(
 			path.join(dir, "quartermaster_sets.json"),
@@ -107,7 +107,7 @@ test("readQuartermasterSets parses sets file and normalizes items", async () => 
 });
 
 
-test("readQuartermasterSets returns null when sets file missing", async () => {
+void test("readQuartermasterSets returns null when sets file missing", async () => {
 	await withTempDir(async (dir) => {
 		const sets = await readQuartermasterSets(dir, "quartermaster_sets.json");
 		assert.equal(sets, null);

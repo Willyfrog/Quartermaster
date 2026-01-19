@@ -65,10 +65,10 @@ export function parseQuartermasterArgs(input: QuartermasterArgsInput): Quarterma
 	};
 }
 
-async function defaultExecute(
+function defaultExecute(
 	parsed: QuartermasterParsedArgs,
-	context: QuartermasterExecuteContext
-): Promise<QuartermasterExecuteResult> {
+	_context: QuartermasterExecuteContext
+): QuartermasterExecuteResult {
 	return {
 		ok: false,
 		message: "Quartermaster is not implemented yet.",
