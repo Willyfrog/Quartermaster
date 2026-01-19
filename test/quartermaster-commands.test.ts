@@ -77,7 +77,7 @@ async function writeSharedSets(shared: string): Promise<void> {
 	);
 }
 
-test("executeQuartermaster list outputs grouped items", async () => {
+void test("executeQuartermaster list outputs grouped items", async () => {
 	const shared = await createSharedRepo();
 	const local = await createTempDir("quartermaster-local-");
 
@@ -101,7 +101,7 @@ test("executeQuartermaster list outputs grouped items", async () => {
 	}
 });
 
-test("executeQuartermaster installed reports symlinked items", async () => {
+void test("executeQuartermaster installed reports symlinked items", async () => {
 	const shared = await createSharedRepo();
 	const local = await createTempDir("quartermaster-local-");
 
@@ -124,7 +124,7 @@ test("executeQuartermaster installed reports symlinked items", async () => {
 	}
 });
 
-test("executeQuartermaster sets lists set counts", async () => {
+void test("executeQuartermaster sets lists set counts", async () => {
 	const shared = await createSharedRepo();
 	const local = await createTempDir("quartermaster-local-");
 
@@ -164,7 +164,7 @@ test("executeQuartermaster sets lists set counts", async () => {
 	}
 });
 
-test("executeQuartermaster setup prompts for repo path", async () => {
+void test("executeQuartermaster setup prompts for repo path", async () => {
 	const shared = await createSharedRepo();
 	const local = await createTempDir("quartermaster-local-");
 	let promptCount = 0;
@@ -197,7 +197,7 @@ test("executeQuartermaster setup prompts for repo path", async () => {
 	}
 });
 
-test("executeQuartermaster setup accepts arguments", async () => {
+void test("executeQuartermaster setup accepts arguments", async () => {
 	const shared = await createSharedRepo();
 	const local = await createTempDir("quartermaster-local-");
 
@@ -217,7 +217,7 @@ test("executeQuartermaster setup accepts arguments", async () => {
 	}
 });
 
-test("executeQuartermaster setup writes global config", async () => {
+void test("executeQuartermaster setup writes global config", async () => {
 	await withTempAgentDir(async () => {
 		const shared = await createSharedRepo();
 		const local = await createTempDir("quartermaster-local-");
@@ -238,7 +238,7 @@ test("executeQuartermaster setup writes global config", async () => {
 	});
 });
 
-test("executeQuartermaster setup errors without UI or args", async () => {
+void test("executeQuartermaster setup errors without UI or args", async () => {
 	const local = await createTempDir("quartermaster-local-");
 
 	try {
@@ -254,7 +254,7 @@ test("executeQuartermaster setup errors without UI or args", async () => {
 	}
 });
 
-test("executeQuartermaster install links a single item", async () => {
+void test("executeQuartermaster install links a single item", async () => {
 	const shared = await createSharedRepo();
 	const local = await createTempDir("quartermaster-local-");
 
@@ -282,7 +282,7 @@ test("executeQuartermaster install links a single item", async () => {
 	}
 });
 
-test("executeQuartermaster install prompts for args", async () => {
+void test("executeQuartermaster install prompts for args", async () => {
 	const shared = await createSharedRepo();
 	const local = await createTempDir("quartermaster-local-");
 	let promptCount = 0;
@@ -320,7 +320,7 @@ test("executeQuartermaster install prompts for args", async () => {
 	}
 });
 
-test("executeQuartermaster install set links all items", async () => {
+void test("executeQuartermaster install set links all items", async () => {
 	const shared = await createSharedRepo();
 	const local = await createTempDir("quartermaster-local-");
 
@@ -351,7 +351,7 @@ test("executeQuartermaster install set links all items", async () => {
 	}
 });
 
-test("executeQuartermaster remove removes symlinked items", async () => {
+void test("executeQuartermaster remove removes symlinked items", async () => {
 	const shared = await createSharedRepo();
 	const local = await createTempDir("quartermaster-local-");
 
@@ -375,7 +375,7 @@ test("executeQuartermaster remove removes symlinked items", async () => {
 	}
 });
 
-test("executeQuartermaster add-to-set writes shared sets file", async () => {
+void test("executeQuartermaster add-to-set writes shared sets file", async () => {
 	const shared = await createSharedRepo();
 	const local = await createTempDir("quartermaster-local-");
 
@@ -406,7 +406,7 @@ test("executeQuartermaster add-to-set writes shared sets file", async () => {
 	}
 });
 
-test("executeQuartermaster remove-from-set updates shared sets file", async () => {
+void test("executeQuartermaster remove-from-set updates shared sets file", async () => {
 	const shared = await createSharedRepo();
 	const local = await createTempDir("quartermaster-local-");
 
