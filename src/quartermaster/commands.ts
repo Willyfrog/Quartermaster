@@ -4,6 +4,7 @@ import path from "node:path";
 import { resolveQuartermasterConfig } from "./config";
 import type { QuartermasterConfigScope } from "./config";
 import { discoverQuartermasterItems, readQuartermasterSets } from "./discovery";
+import { BUILD_INFO } from "./build-info";
 import { getQuartermasterInstallOutcome } from "./entrypoints";
 import type {
 	QuartermasterCommandContext,
@@ -894,7 +895,9 @@ export const executeQuartermaster: QuartermasterExecute = async (
 		switch (parsed.subcommand) {
 			case "": {
 				const outcome = getQuartermasterInstallOutcome();
-				return { ok: outcome.ok, message: outcome.message, parsed };
+				const versionLine = `Version: ${BUILD_INFO.version} (${BUILD_INFO.commit})`;
+				const message = outcome.message ? `${outcome.message}\n${versionLine}` : versionLine;
+				return { ok: outcome.ok, message, parsed };
 			}
 			case "list":
 				return await handleList(parsed, context.ctx);
