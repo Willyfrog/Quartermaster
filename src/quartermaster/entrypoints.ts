@@ -2,6 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { getQuartermasterGlobalConfigPath } from "./config";
+import { BUILD_INFO } from "./build-info";
 
 export const QUARTERMASTER_COMMAND = "quartermaster";
 
@@ -264,9 +265,11 @@ function defaultExecute(
 	_context: QuartermasterExecuteContext
 ): QuartermasterExecuteResult {
 	const outcome = getQuartermasterInstallOutcome();
+	const versionLine = `Version: ${BUILD_INFO.version} (${BUILD_INFO.commit})`;
+	const message = outcome.message ? `${outcome.message}\n${versionLine}` : versionLine;
 	return {
 		ok: outcome.ok,
-		message: outcome.message,
+		message,
 		parsed,
 	};
 }

@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { readQuartermasterConfig, writeQuartermasterConfig } from "../src/quartermaster/config";
+import { BUILD_INFO } from "../src/quartermaster/build-info";
 import { executeQuartermaster } from "../src/quartermaster/commands";
 import { parseQuartermasterArgs } from "../src/quartermaster/entrypoints";
 
@@ -76,6 +77,12 @@ async function writeSharedSets(shared: string): Promise<void> {
 		)
 	);
 }
+
+void test("build info is generated", () => {
+	const instruction = "Build info not generated. Run `npm run build` before running tests.";
+	assert.ok(typeof BUILD_INFO.version === "string" && BUILD_INFO.version.length > 0, instruction);
+	assert.ok(typeof BUILD_INFO.commit === "string" && BUILD_INFO.commit.length > 0, instruction);
+});
 
 void test("executeQuartermaster list outputs grouped items", async () => {
 	const shared = await createSharedRepo();
@@ -267,6 +274,8 @@ void test("executeQuartermaster with no args reports install status", async () =
 			assert.equal(result.ok, false);
 			assert.match(result.message ?? "", /Unexpected: Quartermaster is running/u);
 			assert.ok(!/Quartermaster commands:/u.test(result.message ?? ""));
+			const versionLine = `Version: ${BUILD_INFO.version} (${BUILD_INFO.commit})`;
+			assert.ok(result.message?.includes(versionLine));
 		} finally {
 			await removeTempDir(local);
 		}
