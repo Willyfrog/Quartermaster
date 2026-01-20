@@ -11,6 +11,8 @@ It helps you:
 
 - [Pi coding agent](https://www.npmjs.com/package/@mariozechner/pi-coding-agent)
 
+> ⚠️ **Note:** There is a feature pending development upstream that may solve some of these problems differently in the future: https://github.com/badlogic/pi-mono/issues/645
+
 ## Install
 
 Quartermaster is loaded as a Pi extension. The recommended setup is to install the **bundle globally** so it’s available in every Pi session.
