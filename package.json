@@ -5,7 +5,7 @@
   "type": "commonjs",
   "scripts": {
     "test": "node --test --import tsx",
-    "build": "esbuild src/quartermaster/extension.ts --bundle --platform=node --format=cjs --target=node18 --outfile=dist/quartermaster.bundle.js --footer:js=\"module.exports = module.exports.default;\"",
+    "build": "node scripts/write-build-info.cjs && esbuild src/quartermaster/extension.ts --bundle --platform=node --format=cjs --target=node18 --outfile=dist/quartermaster.bundle.js --footer:js=\"module.exports = module.exports.default;\"",
     "check": "tsc",
     "lint": "eslint \"{src,test}/**/*.ts\"",
     "version:patch": "npm version patch -m \"chore(release): %s\"",
