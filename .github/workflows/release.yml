@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  build-release:
+  release:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -18,16 +18,21 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 18
+          cache: npm
 
-      - name: Install dependencies
+      - name: Install
         run: npm ci
 
       - name: Build bundle
         run: npm run build
 
-      - name: Create release
+      - name: Generate checksum
+        run: sha256sum dist/quartermaster.bundle.js > dist/quartermaster.bundle.js.sha256
+
+      - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          generate_release_notes: true
-          files: dist/quartermaster.bundle.js
+          files: |
+            dist/quartermaster.bundle.js
+            dist/quartermaster.bundle.js.sha256
