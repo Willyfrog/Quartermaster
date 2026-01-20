@@ -256,6 +256,7 @@ async function writeQuartermasterSetsFile(
 	sets: QuartermasterWritableSets
 ): Promise<void> {
 	const setsPath = path.join(repoPath, setsFile);
+	await fs.mkdir(path.dirname(setsPath), { recursive: true });
 	const sortedSets = Object.fromEntries(
 		Object.keys(sets.sets)
 			.sort((a, b) => a.localeCompare(b))
@@ -829,10 +830,9 @@ async function handleAddToSet(
 
 	const prompt = getPrompt(ctx);
 	const config = await resolveQuartermasterConfig({ ctx, prompt });
-	const sets = await readSetsFileForWrite(config.repoPath, config.setsFile, { allowMissing: true });
+	let sets = await readSetsFileForWrite(config.repoPath, config.setsFile, { allowMissing: true });
 	if (!sets) {
-		const setsPath = path.join(config.repoPath, config.setsFile);
-		return { ok: false, message: `No sets file found at ${setsPath}.` };
+		sets = { version: 1, sets: {} };
 	}
 
 	const normalizedPath = normalizeSetPath(type, itemPath);

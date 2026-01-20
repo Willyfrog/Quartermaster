@@ -75,6 +75,24 @@ Example `quartermaster_sets.json`:
 }
 ```
 
+## Sets
+
+Sets are named collections of skills, extensions, tools, and prompts that represent a reusable toolbox for a specific function or workflow (for example, “writer”, “frontend”, or “review”). Think of them as templates that aggregate the items you tend to install together.
+
+Use sets when you want to:
+- Install a bundle of related items with one command.
+- Keep consistent tooling across repos or tasks.
+- Capture a repeatable setup for a role or activity.
+
+You can manage sets directly via commands:
+
+```text
+/quartermaster add-to-set writer skills skills/writing-helper
+/quartermaster add-to-set writer prompts prompts/blog/idea-generator.md
+/quartermaster remove-from-set writer prompts prompts/blog/idea-generator.md
+/quartermaster install set writer
+```
+
 ## Usage Examples
 
 ```text
